@@ -11,7 +11,8 @@ more result records, face events, and per-entity inputs. It does not serialize a
 game-mode presets across 24 non-template scoring families, four non-template
 custom-game profiles, team and non-team layouts, 1-8 preset player caps, and
 Relay, Scramble, and Shift variations. Those tables bound the shipped preset
-vocabulary, but custom settings can produce additional tuples.
+vocabulary. The format can represent additional tuples, but whether 10.09
+accepts and emits off-preset custom combinations remains unknown.
 [S1][S3][S4][S5][S7]
 
 Only one slice has direct production evidence in the available corpus: 12
@@ -157,10 +158,11 @@ only proves the declarative flag value. [S3][S4]
 - `PaxPressBrawlball` (disabled): forces `Brawlball3v3`, allows bots, minimum
   six players.
 
-The `Default` profile plus the 15 serialized settings establishes a
-custom-settings branch beyond the 164 presets. Exact UI ranges and cross-field
-validation were not recovered, so the valid custom tuple set cannot be
-enumerated from these three tables alone. [S5][S7]
+The `Default` profile plus the 15 serialized settings establishes
+representational room for custom settings, not proof that off-preset
+combinations are accepted or emitted. Exact UI ranges, cross-field validation,
+and replay-writer reachability were not recovered, so the valid custom tuple
+set cannot be enumerated from these three tables alone. [S5][S7]
 
 ### 6. Roster, teams, bots, and rotating heroes: proven representation
 
@@ -190,23 +192,26 @@ observed sections came from the same timed FFA settings; the corpus does not
 prove which game lifecycle concept caused repeated results. Treating each
 section as a distinct round is therefore an unproven interpretation. [S8]
 
-### 8. Save lifecycle: proven control-flow skeleton, unresolved guards
+### 8. Save lifecycle: provisional local analysis, unresolved guards
 
-In the hash-verified ABC, match teardown method 3442 in class 164 calls method
-6524 in class 357 before clearing broad match state. Method 6524: [S6]
+A local, uncommitted disassembly of the hash-verified ABC suggests that method
+3442 in class 164 calls method 6524 in class 357 before clearing broad match
+state. No committed analyzer currently verifies that mapping or the downstream
+writer chain, so this sketch is provisional rather than proven. Method 6524
+appears to: [S6]
 
-1. returns if no current match object exists;
-2. returns if its save-in-progress flag is already set;
-3. evaluates several match-state bitmask and mode-state guards;
-4. finalizes match/result state;
-5. constructs a unique `[10.09] <level>.replay` path; and
-6. calls the downstream replay writer, then sets the save-in-progress flag.
+1. return if no candidate current-match object exists;
+2. return if a candidate save-in-progress flag is already set;
+3. evaluate several unresolved bitmask and mode-state guards;
+4. invoke logic tentatively interpreted as match/result finalization;
+5. construct a unique `[10.09] <level>.replay` path; and
+6. call a candidate downstream writer, then set the candidate in-progress flag.
 
-The inspected method does not branch directly on `scoringTypeId`, `variation`,
-`GameModeID`, or `CustomGameID`. This supports one common finalizer across
-modes, but it does **not** make every mode eligible: the meanings of its masks
-(`2`, `4`, `16`, `1024`, `2048`, `8192`, `32768`, `262144`, `524288`, and
-`4194304`) have not been uniquely resolved. [S6]
+The local disassembly shows no direct branch on `scoringTypeId`, `variation`,
+`GameModeID`, or `CustomGameID`, but that observation is not yet provenance-grade
+and does not establish a common finalizer or make every mode eligible. The
+meanings of masks `2`, `4`, `16`, `1024`, `2048`, `8192`, `32768`, `262144`,
+`524288`, and `4194304` have not been uniquely resolved. [S6]
 
 ## Lifecycle coverage ledger
 
@@ -275,10 +280,11 @@ an open proof obligation.
 - **[S5] Official-build declarative artifact:** `Game.swz.10.xml`
   (`CustomGameTypes`), SHA-256
   `36eab628f9e28c04c8dfb533d9e940b50dee5c73c9a33f1043e61820e3c4642b`.
-- **[S6] Official-build ABC:** SHA-256
-  `9fe9c83051343d5b0f667b44e87e6779854f7ee92b1014b279e033fc2bcfba2d`; methods
-  3442 (teardown caller) and 6524 (replay finalizer). Build/hash association is
-  also recorded in `docs/provenance.md`.
+- **[S6] Official-build ABC identity and provisional local analysis:** SHA-256
+  `9fe9c83051343d5b0f667b44e87e6779854f7ee92b1014b279e033fc2bcfba2d`. Local
+  disassembly identified candidate methods 3442 and 6524, but no committed
+  reproducer attests their semantics. `docs/provenance.md` records the build/hash
+  association and a separate movement chain only.
 - **[S7] Repository replay implementation:**
   `packages/replay-format/src/types.ts`,
   `packages/replay-format/src/parser264.ts`, and
@@ -324,6 +330,36 @@ PY
 
 BRAWLHALLA_REPLAY_DIR="$HOME/BrawlhallaReplays" \
   bun test packages/replay-format/tests/parser268.test.ts
+
+# Emit aggregate coverage only: no filenames, player names, or replay bytes.
+BRAWLHALLA_REPLAY_DIR="$HOME/BrawlhallaReplays" bun - <<'TS'
+import { readdirSync, readFileSync } from 'node:fs'
+import { join } from 'node:path'
+import { parse } from './packages/replay-format/src/parser.ts'
+
+const directory = process.env.BRAWLHALLA_REPLAY_DIR
+if (!directory) throw new Error('BRAWLHALLA_REPLAY_DIR is required')
+const replays = readdirSync(directory)
+  .filter((name) => name.startsWith('[10.09]') && name.endsWith('.replay'))
+  .map((name) => parse(new Uint8Array(readFileSync(join(directory, name)))))
+const unique = (values) => [...new Set(values)].sort()
+
+console.log(JSON.stringify({
+  replayCount: replays.length,
+  formatVersions: unique(replays.map((replay) => replay.formatVersion)),
+  playlistIds: unique(replays.map((replay) => replay.playlistId)),
+  playlistNames: unique(replays.map((replay) => replay.playlistName)),
+  onlineValues: unique(replays.map((replay) => replay.onlineGame)),
+  configurationCount: unique(replays.map((replay) => JSON.stringify(replay.gameSettings))).length,
+  maxPlayers: unique(replays.map((replay) => replay.gameSettings.maxPlayers)),
+  entityCounts: unique(replays.map((replay) => replay.entities.length)),
+  botCounts: unique(replays.map((replay) => replay.entities.filter((entity) => entity.isBot).length)),
+  teamShapes: unique(replays.map((replay) => replay.entities.map((entity) => entity.team).join(','))),
+  heroCounts: unique(replays.map((replay) => replay.heroCount)),
+  inputEntityCounts: unique(replays.map((replay) => replay.inputs.entities.length)),
+  resultSectionCounts: unique(replays.map((replay) => replay.results.length)),
+}, null, 2))
+TS
 ```
 
 [S1]: ../../CONTEXT.md
