@@ -1,0 +1,20 @@
+node_modules/
+dist/
+coverage/
+*.tgz
+*.tsbuildinfo
+.DS_Store
+.env
+.env.*
+!.env.example
+
+# User-supplied game and replay artifacts
+artifacts/
+*.abc
+*.swf
+*.swz
+*.replay
+
+# Generated reverse-engineering output
+research/decrypted/
+research/dumps/

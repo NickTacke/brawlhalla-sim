@@ -1,0 +1,279 @@
+import { BitReader } from './bitstream.js'
+import {
+  KNOWN_STATES,
+  REPLAY_TIME_QUANTUM_MS,
+  STATE_END,
+  STATE_FACES,
+  STATE_GAME_DATA,
+  STATE_HEADER,
+  STATE_INPUTS,
+  STATE_INVALID,
+  STATE_KO_FACES,
+  STATE_RESULTS,
+} from './constants.js'
+import { ParseBoundsError, ParseError } from './errors.js'
+import type {
+  Entity,
+  EntityInputs,
+  GameSettings,
+  Hero,
+  InputSection,
+  InputSnapshot,
+  KoEvent,
+  MatchResult,
+  ParsedReplay,
+} from './types.js'
+
+const MAX_ENTITY_EXTRA = 64
+const MAX_ENTITIES = 16
+const MAX_SCORE_ENTRIES = 32
+const MAX_KO_EVENTS = 4096
+const MAX_INPUT_ENTITIES = 16
+const MAX_INPUTS_PER_ENTITY = 1 << 20
+
+function readGameSettings(r: BitReader): GameSettings {
+  return {
+    flags: r.u32(),
+    maxPlayers: r.u32(),
+    duration: r.u32(),
+    roundDuration: r.u32(),
+    startingLives: r.u32(),
+    scoringTypeId: r.u32(),
+    scoreToWin: r.u32(),
+    gameSpeed: r.u32(),
+    damageMultiplier: r.u32(),
+    levelSetId: r.u32(),
+    itemSpawnRuleSetId: r.u32(),
+    weaponSpawnRateId: r.u32(),
+    gadgetSpawnRateId: r.u32(),
+    customGadgetSelection: r.u32(),
+    variation: r.u32(),
+  }
+}
+
+function readHero(r: BitReader): Hero {
+  const heroId = r.u32()
+  const costumeId = r.u32()
+  const stanceIndex = r.u32()
+  r.bool()
+  const weaponSkin2 = r.bits(15)
+  const morphWeapon2 = r.bool()
+  const weaponSkin1 = r.bits(15)
+  return { heroId, costumeId, stanceIndex, weaponSkin1, weaponSkin2, morphWeapon2 }
+}
+
+function readEntity(r: BitReader, heroCount: number, formatVersion: number): Entity {
+  const id = r.i32()
+  // Format 268 added a u32 player-id field after the entity id, before the name.
+  // (Reverse-engineered from 10.09 replays: [id][u32 playerId][u16-len name]...)
+  const playerId = formatVersion >= 268 ? r.u32() : undefined
+  const name = r.string()
+  const colorSchemeId = r.u32()
+  const spawnBotId = r.u32()
+  const companionId = r.u32()
+  const emitterId = r.u32()
+  const trailEffectId = r.u32()
+  const playerThemeId = r.u32()
+  const taunts: number[] = []
+  for (let i = 0; i < 8; i++) taunts.push(r.u32())
+  const winTauntId = r.u16()
+  const loseTauntId = r.u16()
+  let extra = 0
+  while (r.bool()) {
+    if (++extra > MAX_ENTITY_EXTRA) throw new ParseBoundsError(`entity extra exceeded ${MAX_ENTITY_EXTRA}`)
+    r.u32()
+  }
+  const avatarId = r.u16()
+  const team = r.i32()
+  const connectionTime = r.i32()
+  const heroes: Hero[] = []
+  for (let i = 0; i < heroCount; i++) heroes.push(readHero(r))
+  const isBot = r.bool()
+  const handicapsEnabled = r.bool()
+  if (handicapsEnabled) {
+    r.u32()
+    r.u32()
+    r.u32()
+  }
+  return {
+    id,
+    name,
+    playerId,
+    team,
+    isBot,
+    playerData: {
+      colorSchemeId,
+      spawnBotId,
+      companionId,
+      emitterId,
+      trailEffectId,
+      playerThemeId,
+      taunts,
+      winTauntId,
+      loseTauntId,
+      avatarId,
+      connectionTime,
+      heroes,
+    },
+  }
+}
+
+function readMatchResult(r: BitReader): MatchResult {
+  const lengthMs = r.u32()
+  const scores: Record<number, number> = {}
+  if (r.bool()) {
+    let scoreCount = 0
+    while (r.bool()) {
+      if (++scoreCount > MAX_SCORE_ENTRIES) throw new ParseBoundsError(`score entries exceeded ${MAX_SCORE_ENTRIES}`)
+      const entityId = r.bits(5)
+      const score = r.i16()
+      scores[entityId] = score
+    }
+  }
+  const endOfMatchFanfareId = r.u32()
+  return { lengthMs, scores, endOfMatchFanfareId }
+}
+
+function readInputSection(r: BitReader): InputSection {
+  let inputEntityCount = 0
+  let maxTimestampMs = -1
+  const inputEntities: EntityInputs[] = []
+
+  while (r.bool()) {
+    if (++inputEntityCount > MAX_INPUT_ENTITIES)
+      throw new ParseBoundsError(`input entities exceeded ${MAX_INPUT_ENTITIES}`)
+    const entityId = r.bits(5)
+    const inputCount = r.i32()
+    if (inputCount < 0 || inputCount > MAX_INPUTS_PER_ENTITY) {
+      throw new ParseBoundsError(`inputs per entity exceeded ${MAX_INPUTS_PER_ENTITY} (got ${inputCount})`)
+    }
+
+    const snapshots: InputSnapshot[] = []
+    let previousTimestampMs = -1
+    for (let index = 0; index < inputCount; index++) {
+      const timestampMs = r.i32()
+      if (timestampMs < 0 || timestampMs % REPLAY_TIME_QUANTUM_MS !== 0) {
+        throw new ParseError(`input timestamp ${timestampMs} is not aligned to the 16 ms replay clock`)
+      }
+      if (timestampMs <= previousTimestampMs) {
+        throw new ParseError(`input timestamps must be strictly increasing for entity ${entityId}`)
+      }
+      const mask = r.bool() ? r.bits(14) : 0
+      snapshots.push({ timestampMs, mask })
+      previousTimestampMs = timestampMs
+      if (timestampMs > maxTimestampMs) maxTimestampMs = timestampMs
+    }
+    inputEntities.push({ entityId, snapshots })
+  }
+
+  return { entities: inputEntities, maxTimestampMs }
+}
+
+export function parse264(envelopeBody: Uint8Array): ParsedReplay {
+  const r = new BitReader(envelopeBody)
+  const formatVersion = r.u32()
+
+  let header: {
+    randomSeed: number
+    playlistId: number
+    playlistName: string | null
+    onlineGame: boolean
+  } | null = null
+  let gameSettings: GameSettings | null = null
+  let levelId = -1
+  let heroCount = -1
+  const entities: Entity[] = []
+  let gameDataChecksum = 0
+  const results: MatchResult[] = []
+  let koFaces: KoEvent[] = []
+  let victoryFaces: KoEvent[] | null = null
+  let inputs: InputSection = { entities: [], maxTimestampMs: -1 }
+
+  let reached = false
+  while (!reached) {
+    const state = r.bits(4)
+    if (!KNOWN_STATES.has(state)) {
+      throw new ParseError(`unknown state code ${state} at bit ${r.position}`)
+    }
+    switch (state) {
+      case STATE_END:
+        reached = true
+        break
+      case STATE_HEADER: {
+        const randomSeed = r.u32()
+        const playlistId = r.u32()
+        const playlistName = playlistId !== 0 ? r.string() : null
+        const onlineGame = r.bool()
+        header = { randomSeed, playlistId, playlistName, onlineGame }
+        break
+      }
+      case STATE_GAME_DATA: {
+        gameSettings = readGameSettings(r)
+        levelId = r.u32()
+        heroCount = r.u16()
+        if (heroCount < 1 || heroCount > 5) {
+          throw new ParseError(`heroCount out of range: ${heroCount}`)
+        }
+        let entityCount = 0
+        while (r.bool()) {
+          if (++entityCount > MAX_ENTITIES) throw new ParseBoundsError(`entities exceeded ${MAX_ENTITIES}`)
+          entities.push(readEntity(r, heroCount, formatVersion))
+        }
+        gameDataChecksum = r.u32()
+        break
+      }
+      case STATE_RESULTS:
+        results.push(readMatchResult(r))
+        break
+      case STATE_KO_FACES: {
+        const arr: KoEvent[] = []
+        let koCount = 0
+        while (r.bool()) {
+          if (++koCount > MAX_KO_EVENTS) throw new ParseBoundsError(`ko events exceeded ${MAX_KO_EVENTS}`)
+          arr.push({ entityId: r.bits(5), timestampMs: r.i32() })
+        }
+        koFaces = arr
+        break
+      }
+      case STATE_FACES: {
+        const arr: KoEvent[] = []
+        let koCount = 0
+        while (r.bool()) {
+          if (++koCount > MAX_KO_EVENTS) throw new ParseBoundsError(`ko events exceeded ${MAX_KO_EVENTS}`)
+          arr.push({ entityId: r.bits(5), timestampMs: r.i32() })
+        }
+        victoryFaces = arr
+        break
+      }
+      case STATE_INPUTS:
+        // Capture per-entity 16 ms timecode snapshots (the sim's fuel).
+        inputs = readInputSection(r)
+        break
+      case STATE_INVALID:
+        throw new ParseError('replay marked invalid (state=8)')
+      default:
+        throw new ParseError(`unhandled state code ${state}`)
+    }
+  }
+
+  if (!header) throw new ParseError('missing Header section')
+  if (!gameSettings) throw new ParseError('missing GameData section')
+  if (results.length === 0) throw new ParseError('missing Results section')
+
+  return {
+    formatVersion,
+    randomSeed: header.randomSeed,
+    playlistId: header.playlistId,
+    playlistName: header.playlistName,
+    onlineGame: header.onlineGame,
+    gameSettings,
+    levelId,
+    heroCount,
+    entities,
+    results,
+    koFaces,
+    victoryFaces,
+    gameDataChecksum,
+    inputs,
+  }
+}

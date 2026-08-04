@@ -1,0 +1,33 @@
+{
+  "name": "@brawlhalla-sim/replay-format",
+  "version": "0.0.1",
+  "description": "Brawlhalla replay parser for deterministic simulation inputs",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "test": "bun test",
+    "prepack": "bun run build"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/NickTacke/brawlhalla-sim.git",
+    "directory": "packages/replay-format"
+  },
+  "license": "MIT"
+}

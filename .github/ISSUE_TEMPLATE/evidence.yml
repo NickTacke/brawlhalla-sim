@@ -1,0 +1,33 @@
+name: Evidence trace
+about: Record a reproducible behavior or constant provenance trace
+title: "Evidence: "
+labels: ["evidence"]
+body:
+  - type: input
+    id: build
+    attributes:
+      label: Game patch and build
+      placeholder: 10.09.96325
+    validations:
+      required: true
+  - type: textarea
+    id: claim
+    attributes:
+      label: Claim
+      description: State exactly what behavior or value this evidence establishes.
+    validations:
+      required: true
+  - type: textarea
+    id: chain
+    attributes:
+      label: Provenance chain
+      description: Include source identifiers, control flow, dataflow, and units.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Reproduction
+      description: Provide commands and expected output.
+    validations:
+      required: true
