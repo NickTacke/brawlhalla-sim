@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto'
-import { readFileSync, readdirSync, statSync } from 'node:fs'
-import { basename, dirname, join, resolve } from 'node:path'
+import { readFileSync, readdirSync } from 'node:fs'
+import { dirname, join, resolve } from 'node:path'
 
 import { AbcFile, ExtendedBuffer, InstructionDisassembler } from 'abc-disassembler'
 import { BitReader } from '../../packages/replay-format/src/bitstream.js'
@@ -14,6 +14,7 @@ type Instruction = {
 type CorpusFixture = {
   file: string
   sha256: string
+  byteLength: number
   gameDataChecksum: number
 }
 
@@ -26,6 +27,12 @@ type CorpusManifest = {
 const EXPECTED_BUILD = '10.09.96325'
 const EXPECTED_REPLAY_FORMAT = 268
 const EXPECTED_ABC_SHA256 = '9fe9c83051343d5b0f667b44e87e6779854f7ee92b1014b279e033fc2bcfba2d'
+const EXPECTED_MANIFEST_SHA256 = 'b044f9d1d76d51c61e0b21dae3074e02ac4248594ed84e79b65a59326db7d1ac'
+const EXPECTED_MANIFEST_BYTE_LENGTH = 23_320
+const EXPECTED_FIXTURE_COUNT = 12
+const EXPECTED_FIXTURE_HASH_COHORT_SHA256 = '9c88bbb5b18b16323951b020af90a044747fa3c92f3811d898be43471cf90c3e'
+const EXPECTED_EXTRACTED_ENTRY_COUNT = 261
+const EXPECTED_EXTRACTED_AGGREGATE_SHA256 = '4bcd0666a713d81266bd76885ed21740c4e8c4c01def2ebcd02202983a6a8d8f'
 const EXPECTED_ARCHIVE_SHA256 = {
   'BrawlhallaAir.swf': '40df9af5308b9a17bf015feb38edec6d9bea57d1cd53078d298aa725acceb8b2',
   'Dynamic.swz': 'cd54de039bc4e3441a7ae5811ef8748a719f49e0d4917016407d83b201ddf9c4',
@@ -46,11 +53,72 @@ function sha256(bytes: Uint8Array): string {
   return createHash('sha256').update(bytes).digest('hex')
 }
 
-function requireFileHash(path: string, expected: string): { bytes: Buffer; sha256: string; byteLength: number } {
+function requireFileHash(
+  path: string,
+  expected: string,
+  label: string,
+): { bytes: Buffer; sha256: string; byteLength: number } {
   const bytes = readFileSync(path)
   const actual = sha256(new Uint8Array(bytes))
-  if (actual !== expected) throw new Error(`${basename(path)} SHA-256 mismatch: expected ${expected}, found ${actual}`)
+  if (actual !== expected) throw new Error(`${label} SHA-256 mismatch: expected ${expected}, found ${actual}`)
   return { bytes, sha256: actual, byteLength: bytes.length }
+}
+
+function fixtureHashCohortSha256(fixtures: CorpusFixture[]): string {
+  return sha256(new TextEncoder().encode(fixtures.map((fixture) => `${fixture.sha256}\n`).join('')))
+}
+
+type ReviewedInputIdentity = {
+  manifestSha256: string
+  manifestByteLength: number
+  fixtureCount: number
+  fixtureHashCohortSha256: string
+  extractedEntryCount: number
+  extractedAggregateSha256: string
+}
+
+function assertReviewedInputIdentity(identity: ReviewedInputIdentity): void {
+  if (identity.manifestSha256 !== EXPECTED_MANIFEST_SHA256) throw new Error('reviewed corpus manifest SHA-256 mismatch')
+  if (identity.manifestByteLength !== EXPECTED_MANIFEST_BYTE_LENGTH) {
+    throw new Error(`reviewed corpus manifest byte count mismatch: expected ${EXPECTED_MANIFEST_BYTE_LENGTH}`)
+  }
+  if (identity.fixtureCount !== EXPECTED_FIXTURE_COUNT) {
+    throw new Error(
+      `reviewed fixture count mismatch: expected ${EXPECTED_FIXTURE_COUNT}, found ${identity.fixtureCount}`,
+    )
+  }
+  if (identity.fixtureHashCohortSha256 !== EXPECTED_FIXTURE_HASH_COHORT_SHA256) {
+    throw new Error('reviewed fixture hash cohort mismatch')
+  }
+  if (identity.extractedEntryCount !== EXPECTED_EXTRACTED_ENTRY_COUNT) {
+    throw new Error(
+      `reviewed extracted-entry count mismatch: expected ${EXPECTED_EXTRACTED_ENTRY_COUNT}, found ${identity.extractedEntryCount}`,
+    )
+  }
+  if (identity.extractedAggregateSha256 !== EXPECTED_EXTRACTED_AGGREGATE_SHA256) {
+    throw new Error('reviewed extracted-entry aggregate mismatch')
+  }
+}
+
+function runNegativeValidationCase(name: string): never {
+  const reviewed: ReviewedInputIdentity = {
+    manifestSha256: EXPECTED_MANIFEST_SHA256,
+    manifestByteLength: EXPECTED_MANIFEST_BYTE_LENGTH,
+    fixtureCount: EXPECTED_FIXTURE_COUNT,
+    fixtureHashCohortSha256: EXPECTED_FIXTURE_HASH_COHORT_SHA256,
+    extractedEntryCount: EXPECTED_EXTRACTED_ENTRY_COUNT,
+    extractedAggregateSha256: EXPECTED_EXTRACTED_AGGREGATE_SHA256,
+  }
+  if (name === 'empty-fixtures') reviewed.fixtureCount = 0
+  else if (name === 'partial-fixtures') reviewed.fixtureCount--
+  else if (name === 'empty-extracted') reviewed.extractedEntryCount = 0
+  else if (name === 'partial-extracted') reviewed.extractedEntryCount--
+  else {
+    console.error('negative validation cases: empty-fixtures, partial-fixtures, empty-extracted, partial-extracted')
+    process.exit(64)
+  }
+  assertReviewedInputIdentity(reviewed)
+  throw new Error('negative validation case was incorrectly accepted')
 }
 
 function multinameName(value: unknown, strings: string[]): string {
@@ -172,6 +240,9 @@ function checksumFromReplay(raw: Uint8Array): {
   return { format, accumulatorUint32: accumulator, calculated, stored, entityCount, heroCount }
 }
 
+const negativeValidationCase = argument('--negative-validation-case')
+if (negativeValidationCase) runNegativeValidationCase(negativeValidationCase)
+
 const abcPath = argument('--abc')
 const archiveDirectory = argument('--archives')
 const extractedDirectory = argument('--extracted')
@@ -183,12 +254,14 @@ if (!abcPath || !archiveDirectory || !extractedDirectory || !corpusManifestPath)
   process.exit(64)
 }
 
-const abcIdentity = requireFileHash(resolve(abcPath), EXPECTED_ABC_SHA256)
+const abcIdentity = requireFileHash(resolve(abcPath), EXPECTED_ABC_SHA256, 'ABC')
 const archiveIdentities = Object.entries(EXPECTED_ARCHIVE_SHA256).map(([name, expected]) => ({
   name,
-  ...requireFileHash(join(resolve(archiveDirectory), name), expected),
+  ...requireFileHash(join(resolve(archiveDirectory), name), expected, `archive ${name}`),
 }))
-const manifest = JSON.parse(readFileSync(resolve(corpusManifestPath), 'utf8')) as CorpusManifest
+const manifestIdentity = requireFileHash(resolve(corpusManifestPath), EXPECTED_MANIFEST_SHA256, 'corpus manifest')
+const manifest = JSON.parse(manifestIdentity.bytes.toString('utf8')) as CorpusManifest
+if (!Array.isArray(manifest.fixtures)) throw new Error('corpus manifest fixtures must be an array')
 if (manifest.target.build !== EXPECTED_BUILD || manifest.target.replayFormat !== EXPECTED_REPLAY_FORMAT) {
   throw new Error('corpus manifest target does not match build 10.09.96325 format 268')
 }
@@ -196,6 +269,7 @@ if (manifest.provenance.abcSha256 !== EXPECTED_ABC_SHA256) throw new Error('corp
 if (manifest.provenance.gameSwzSha256 !== EXPECTED_ARCHIVE_SHA256['Game.swz']) {
   throw new Error('corpus manifest Game.swz hash mismatch')
 }
+const manifestFixtureHashCohortSha256 = fixtureHashCohortSha256(manifest.fixtures)
 
 const abc: any = AbcFile.read(new ExtendedBuffer(abcIdentity.bytes))
 const strings = abc.constant_pool.string as string[]
@@ -297,6 +371,7 @@ const dataParserCandidates = Object.fromEntries(
   Object.entries(parserProbes).map(([label, requiredStrings]) => [
     label,
     {
+      evidence: 'candidate-location-from-string-conjunction-not-parser-proof',
       requiredStrings,
       candidates: [...methodStringSets.entries()]
         .filter(([, methodStrings]) => requiredStrings.every((value) => methodStrings.has(value)))
@@ -311,6 +386,36 @@ const checksumOpcodeSha256 = sha256(new TextEncoder().encode(checksumInstruction
 const checksumSemanticSha256 = instructionSemanticHash(checksumInstructions)
 if (checksumInstructions.length !== 298)
   throw new Error(`expected 298 checksum instructions, found ${checksumInstructions.length}`)
+const countOpcode = (name: string): number =>
+  checksumInstructions.filter((instruction) => instruction.name === name).length
+const countSequence = (names: string[]): number =>
+  checksumInstructions.filter((_, index) =>
+    names.every((name, offset) => checksumInstructions[index + offset]?.name === name),
+  ).length
+const arithmeticInstructionGrouping = {
+  opcodeCounts: {
+    multiply_i: countOpcode('multiply_i'),
+    add_i: countOpcode('add_i'),
+    convert_u: countOpcode('convert_u'),
+  },
+  weightedProductGroups: {
+    multiplyConvertAddConvert: countSequence(['multiply_i', 'convert_u', 'add_i', 'convert_u']),
+    multiplyAddConvert: countSequence(['multiply_i', 'add_i', 'convert_u']),
+  },
+  indexWeightGroups: {
+    addThenMultiply: countSequence(['add_i', 'multiply_i']),
+  },
+}
+if (
+  arithmeticInstructionGrouping.opcodeCounts.multiply_i !== 16 ||
+  arithmeticInstructionGrouping.opcodeCounts.add_i !== 23 ||
+  arithmeticInstructionGrouping.opcodeCounts.convert_u !== 57 ||
+  arithmeticInstructionGrouping.weightedProductGroups.multiplyConvertAddConvert !== 14 ||
+  arithmeticInstructionGrouping.weightedProductGroups.multiplyAddConvert !== 2 ||
+  arithmeticInstructionGrouping.indexWeightGroups.addThenMultiply !== 5
+) {
+  throw new Error('checksum integer instruction grouping mismatch')
+}
 
 const checksumTrait = abc.class[357].traits.find((trait: any) => trait.data?.method === CHECKSUM_METHOD_ID)
 const checksumTraitName = multinameName(abc.constant_pool.multiname[checksumTrait?.name - 1], strings)
@@ -342,14 +447,16 @@ if (bitsetWordScore.length !== 1 || bitsetWordScore[0].methodId !== 1860) {
 }
 
 const corpusDirectory = dirname(resolve(corpusManifestPath))
-const fixtureChecks = manifest.fixtures.map((fixture) => {
+const fixtureChecks = manifest.fixtures.map((fixture, fixtureIndex) => {
   const raw = readFileSync(join(corpusDirectory, fixture.file))
   const replaySha256 = sha256(new Uint8Array(raw))
-  if (replaySha256 !== fixture.sha256) throw new Error(`replay SHA-256 mismatch for ${fixture.file}`)
+  if (replaySha256 !== fixture.sha256) throw new Error(`replay SHA-256 mismatch at fixture index ${fixtureIndex}`)
+  if (raw.byteLength !== fixture.byteLength)
+    throw new Error(`replay byte count mismatch at fixture index ${fixtureIndex}`)
   const result = checksumFromReplay(new Uint8Array(raw))
   if (result.stored !== fixture.gameDataChecksum || result.calculated !== result.stored) {
     throw new Error(
-      `game-data checksum mismatch for ${fixture.sha256}: calculated ${result.calculated}, raw ${result.stored}, manifest ${fixture.gameDataChecksum}`,
+      `game-data checksum mismatch at fixture index ${fixtureIndex}: calculated ${result.calculated}, raw ${result.stored}, manifest ${fixture.gameDataChecksum}`,
     )
   }
   return {
@@ -370,12 +477,25 @@ const extractedEntries = readdirSync(resolve(extractedDirectory))
     const bytes = readFileSync(path)
     return {
       name,
-      byteLength: statSync(path).size,
+      byteLength: bytes.byteLength,
       sha256: sha256(new Uint8Array(bytes)),
       root: name.endsWith('.xml') ? xmlRoot(bytes) : null,
     }
   })
   .sort((left, right) => left.name.localeCompare(right.name, 'en', { numeric: true }))
+
+const extractedAggregateSha256 = sha256(
+  new TextEncoder().encode(extractedEntries.map((entry) => `${entry.name}\0${entry.sha256}\n`).join('')),
+)
+assertReviewedInputIdentity({
+  manifestSha256: manifestIdentity.sha256,
+  manifestByteLength: manifestIdentity.byteLength,
+  fixtureCount: manifest.fixtures.length,
+  fixtureHashCohortSha256: manifestFixtureHashCohortSha256,
+  extractedEntryCount: extractedEntries.length,
+  extractedAggregateSha256,
+})
+if (fixtureChecks.length !== EXPECTED_FIXTURE_COUNT) throw new Error('not all reviewed fixtures were checked')
 
 const categoryCounts: Record<string, number> = {}
 for (const entry of extractedEntries) {
@@ -390,11 +510,15 @@ console.log(
       identities: {
         abc: { sha256: abcIdentity.sha256, byteLength: abcIdentity.byteLength },
         archives: archiveIdentities.map(({ name, sha256: hash, byteLength }) => ({ name, sha256: hash, byteLength })),
+        corpusManifest: {
+          sha256: manifestIdentity.sha256,
+          byteLength: manifestIdentity.byteLength,
+          fixtureCount: manifest.fixtures.length,
+          fixtureHashCohortSha256: manifestFixtureHashCohortSha256,
+        },
         extracted: {
           entryCount: extractedEntries.length,
-          aggregateSha256: sha256(
-            new TextEncoder().encode(extractedEntries.map((entry) => `${entry.name}\0${entry.sha256}\n`).join('')),
-          ),
+          aggregateSha256: extractedAggregateSha256,
           categoryCounts,
         },
       },
@@ -407,7 +531,9 @@ console.log(
           semanticSha256: checksumSemanticSha256,
           modulo: CHECKSUM_MODULUS,
           moduloInstruction: checksumModuloIndex,
-          arithmetic: 'AVM2 multiply_i/add_i with uint conversion after each operation; final uint % 173',
+          arithmetic:
+            '14 multiply_i→convert_u→add_i→convert_u product groups; 2 multiply_i→add_i→convert_u product groups; 5 index-weight add_i→multiply_i sites; accumulator stores preserve modulo-2^32 equivalence; final uint % 173',
+          arithmeticInstructionGrouping,
           orderedWeights: {
             perEntity: {
               colorSchemeId: 5,
@@ -443,10 +569,19 @@ console.log(
           rawChecksumReadInstructions: [580, 584],
           checksumCallInstruction: readerChecksumCallIndex,
           comparisonInstructions: [787, 803],
+          checksumSkipConditions: ['heroCount is zero', 'restored level is null', 'roster is empty'],
         },
         dataParserCandidates,
       },
       fixtureChecks,
+      reviewedProof: {
+        manifestIdentityMatched: true,
+        fixtureHashCohortMatched: true,
+        extractedIdentityMatched: true,
+        archiveIdentitiesMatched: archiveIdentities.length === Object.keys(EXPECTED_ARCHIVE_SHA256).length,
+        fixtureChecksPassed: fixtureChecks.length,
+        fixtureChecksRequired: EXPECTED_FIXTURE_COUNT,
+      },
       status: 'proven-for-reviewed-corpus',
     },
     null,

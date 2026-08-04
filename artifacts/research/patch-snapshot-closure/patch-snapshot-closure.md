@@ -7,16 +7,16 @@ A complete necessary-and-sufficient simulation closure is **not yet proven**. Ke
 What is proven:
 
 1. The source snapshot examined here is pinned by `BrawlhallaAir.swf`, `main.abc`, `Engine.swz`, `Game.swz`, and `Dynamic.swz` hashes below.
-2. Replay selectors reach distinct registries and tables for modes, scoring, heroes, stats, runes, dodges, items, powers, hurtboxes, spawn rules/rates, level sets, and level geometry. Unique AVM2 parser candidates for these shipped field-name conjunctions are listed below.
+2. Shipped field-name conjunctions identify unique AVM2 candidate methods for modes, scoring, heroes, stats, runes, dodges, items, powers, hurtboxes, spawn rules/rates, level sets, and level geometry. This locator evidence does not itself prove parsing or replay-to-registry dataflow.
 3. `gameDataChecksum` is not a patch-data, XML, code, physics, or replay-payload checksum. It is a weak weighted checksum of selected state-4 roster/loadout fields and `levelId`, reduced modulo 173.
-4. A precise closure-manifest candidate can now be specified. Its sufficiency cannot be certified until randomness, all replay-producing mode roots, dynamic rule reachability, collision/hitbox geometry, loader normalization, and AVM2/AIR native semantics are closed.
+4. An internally specified closure-manifest candidate can now be proposed. Its sufficiency cannot be certified until randomness, all replay-producing mode roots, dynamic rule reachability, collision/hitbox geometry, loader normalization, and AVM2/AIR native semantics are closed.
 
 The practical answer is therefore: use the manifest candidate in this report as a fail-closed contract, but do not label a 10.09 snapshot complete yet.
 
 ## Evidence grades
 
 - **P (proven):** unique control/dataflow in the hash-pinned ABC, exact raw replay calculation, or byte hash.
-- **S (source-derived):** exact shipped XML/delimited entry and a unique parser-method conjunction. This proves parsing, not every downstream behavior.
+- **S (source-derived):** exact shipped XML/delimited identity or control/dataflow directly established from the pinned source. A string conjunction alone is not parsing proof.
 - **C (candidate):** required by the proposed closure contract but transitive necessity or sufficiency remains unproved.
 - **U (unknown):** primary evidence inspected here does not close the claim.
 
@@ -34,12 +34,23 @@ bun run provenance:patch-snapshot -- \
   --corpus-manifest artifacts/replay-corpus/10.09.96325/manifest.json
 ```
 
-The command rejects hash mismatches, discovers parser methods by shipped field-name conjunctions, reads only state 3/state 4 from each hash-pinned replay, recomputes `gameDataChecksum`, and emits hashes/counts/derived arithmetic. It emits no name, Brawlhalla ID, local path, or raw proprietary record. Useful focused views:
+The command requires the reviewed manifest SHA-256 and byte count, its exact 12-fixture hash cohort, all four archive identities, and the 261-entry extraction aggregate before it can emit `proven-for-reviewed-corpus`. It locates candidate methods by shipped field-name conjunctions, reads only state 3/state 4 from every hash-pinned replay, and recomputes all 12 `gameDataChecksum` values. Successful JSON emits no name, Brawlhalla ID, local path, manifest fixture filename, or raw proprietary record. Operating-system and runtime error diagnostics can still expose user-supplied local paths. Useful focused views:
 
 ```bash
 bun run provenance:patch-snapshot -- ... | jq '.identities, .avm2.dataParserCandidates'
 bun run provenance:patch-snapshot -- ... | jq '.avm2.checksumMethod, .avm2.writer, .avm2.reader, .fixtureChecks'
 ```
+
+The analyzer also has a proprietary-data-free negative identity-validation mode. Each command below must exit nonzero:
+
+```bash
+bun tools/avm2-provenance/patch_snapshot_provenance.ts --negative-validation-case empty-fixtures
+bun tools/avm2-provenance/patch_snapshot_provenance.ts --negative-validation-case partial-fixtures
+bun tools/avm2-provenance/patch_snapshot_provenance.ts --negative-validation-case empty-extracted
+bun tools/avm2-provenance/patch_snapshot_provenance.ts --negative-validation-case partial-extracted
+```
+
+These cases exercise the same reviewed count/aggregate validator used immediately before successful JSON emission. Hash-altered manifests also fail earlier on the exact reviewed manifest SHA-256.
 
 ## Evidence identity
 
@@ -73,7 +84,9 @@ The initialization closure plus every code/data/native dependency transitively r
 
 Artifacts useful to prove compatibility but not needed by a validated headless runtime: authentic replay bytes, corpus manifest, reference-client playback, telemetry, render/audio assets, and raw archives retained for audit. A graphics/SWF asset moves into behavior closure if AVM2 dataflow proves that collision or hitbox geometry is read from it.
 
-## Replay-to-external dependency graph
+## Candidate replay-to-external dependency graph
+
+The arrows below are closure hypotheses or required resolution edges unless a line is separately backed by control/dataflow evidence. The string-conjunction scan does not establish these edges.
 
 ```text
 format 268 state 3/state 4
@@ -101,26 +114,28 @@ Level-set membership is not necessary to replay a match once a valid `levelId` a
 
 ## Normalized data candidate
 
-### Proven parser/source links
+### Candidate parser/source locations
 
-Every row below is build `10.09.96325`, ABC `9fe9…ba2d`, and is reproduced by `.avm2.dataParserCandidates`. “Unique” means exactly one method contained the full field-name conjunction shown by the command.
+Every row below is build `10.09.96325`, ABC `9fe9…ba2d`, and is reproduced by `.avm2.dataParserCandidates`. “Unique candidate” means exactly one method contained the full field-name conjunction shown by the command. It does not establish that the method parses the named entry, how values flow into a registry, or whether replay selectors reach that registry.
 
-| Category | Shipped entry SHA-256 | Unique parser class/method/trait | Closure role and grade |
+**Control/dataflow parser proof:** none is claimed by this reviewed command. Establishing a parser link requires an instruction-level source-read-to-object/registry trace independent of the string conjunction.
+
+| Category | Shipped entry SHA-256 | Unique candidate class/method/trait | Candidate closure role and grade |
 | --- | --- | --- | --- |
-| Dodge | `Game.swz.11.xml` `a0c99d2052bee75b755bb2e8b16dd2e6e8b167d154cd20a2baf6c02a93fa63e4` | class 138 `_-P6H`, method 2672 `_-F2f` (`DodgeID`, `SpeedXMaxMult`, `AccelYFormula`) | behavior S/C |
-| Game mode | `Game.swz.17.xml` `cdc1409bfcb84e30d76419087656c7dfe38c549e9528198adf6ba9be5f80741e` | class 184 `_-F5K`, method 3732 `_-W2o` (`GameModeID`, `ScoringType`, `LevelSet`, `DamageRatio`, `Variation`) | initialization/mode S/C |
-| Hero | `Game.swz.23.xml` `1a9c27d1e21178870dafe5746c00efb7ec154d14290af4c628eb878c054eb920` | class 217 `HeroType`, method 4123 `_-H5O` | initialization/behavior S/C |
-| Hurtbox | `Game.swz.24.dat` `358aac8501dbf9051c22c7f14c8eef72a16cd0a071ad2ef398ab6695286e3333` | class 237 `_-o1U`, method 4655 `_-E2Z` | behavior S/C |
-| Item spawn rate | `Game.swz.25.xml` `e9d054eacf39030ea242d713bb0808b66567363f0877f150724f2a4ce7b12aa4` | class 255 `_-X5O`, method 4809 `_-4` | behavior/randomness S/C |
-| Item spawn rules | `Game.swz.26.xml` `f1ee7530c4e0693232c8a4fdc93163f676691259dc2da9e83bc332cf21b3391c` | class 256 `_-E2c`, method 4818 `_-14t` | initialization/behavior S/C |
-| Item | `Game.swz.27.dat` `d68102cbafaef4f6f9eae817f1f7c5830be4464e8cea89fbd0ee36bc28e95f3e` | class 257 `ItemType`, method 4834 `_-B5B` | behavior S/C |
-| Level set | `Game.swz.30.xml` `e6870349d9104bc91fddcfa329f2cf4b5a4b96e466cfed47cb92834316b54dff` | class 275 `_-w1p`, method 5098 `_-4j` | initialization/verification S/C |
-| Level geometry | `Dynamic.swz`, archive `cd54…f9c4`; 120 `LevelDesc` leaves | script 279 initializer, method 5156 (`CameraBounds`, `HardCollision`, `SoftCollision`, `Respawn`) | initialization/behavior S/C |
-| Power swap | `Game.swz.39.xml` `a6eb10c26320ba18da8a1067cae09258a28c6f6c0a1a27b1adf27c46a2946b6f` | class 341 `_-D4h`, method 6264 `_-ru` | loadout/behavior unresolved S/C |
-| Power | `Game.swz.38.dat` `715468d8eda8fa2ec3d88a8b5395c076bec937640927909add4745eda2883f27` | class 342 `PowerType`, method 6294 `_-L4o` | behavior S/C |
-| Rune | `Game.swz.42.xml` `13c32dfdc7ba3b5296c562bf69996b93b68f6b48dcdd226e15a0899f24d3e910` | class 393 `_-O5l`, method 7108 `_-9U` | initialization/behavior S/C |
-| Scoring | `Game.swz.43.xml` `fd9efadd2f3c6f7e844ec9c52b1f685fb15d32e936934450e36e441f3e182f7d` | class 406 `ScoringType`, method 7279 `_-yV` | behavior S/C |
-| Stat ladder | `Game.swz.52.xml` `0744728b58c6134f5d205236ae6a34c1f05d55c9f6b80f074f0f6cf1cb694692` | class 629 `_-92f`, method 11659 `_-j4W` | initialization/behavior S/C |
+| Dodge | `Game.swz.11.xml` `a0c99d2052bee75b755bb2e8b16dd2e6e8b167d154cd20a2baf6c02a93fa63e4` | class 138 `_-P6H`, method 2672 `_-F2f` (`DodgeID`, `SpeedXMaxMult`, `AccelYFormula`) | behavior C |
+| Game mode | `Game.swz.17.xml` `cdc1409bfcb84e30d76419087656c7dfe38c549e9528198adf6ba9be5f80741e` | class 184 `_-F5K`, method 3732 `_-W2o` (`GameModeID`, `ScoringType`, `LevelSet`, `DamageRatio`, `Variation`) | initialization/mode C |
+| Hero | `Game.swz.23.xml` `1a9c27d1e21178870dafe5746c00efb7ec154d14290af4c628eb878c054eb920` | class 217 `HeroType`, method 4123 `_-H5O` | initialization/behavior C |
+| Hurtbox | `Game.swz.24.dat` `358aac8501dbf9051c22c7f14c8eef72a16cd0a071ad2ef398ab6695286e3333` | class 237 `_-o1U`, method 4655 `_-E2Z` | behavior C |
+| Item spawn rate | `Game.swz.25.xml` `e9d054eacf39030ea242d713bb0808b66567363f0877f150724f2a4ce7b12aa4` | class 255 `_-X5O`, method 4809 `_-4` | behavior/randomness C |
+| Item spawn rules | `Game.swz.26.xml` `f1ee7530c4e0693232c8a4fdc93163f676691259dc2da9e83bc332cf21b3391c` | class 256 `_-E2c`, method 4818 `_-14t` | initialization/behavior C |
+| Item | `Game.swz.27.dat` `d68102cbafaef4f6f9eae817f1f7c5830be4464e8cea89fbd0ee36bc28e95f3e` | class 257 `ItemType`, method 4834 `_-B5B` | behavior C |
+| Level set | `Game.swz.30.xml` `e6870349d9104bc91fddcfa329f2cf4b5a4b96e466cfed47cb92834316b54dff` | class 275 `_-w1p`, method 5098 `_-4j` | initialization/verification C |
+| Level geometry | `Dynamic.swz`, archive `cd54…f9c4`; 120 `LevelDesc` leaves | script 279 initializer, method 5156 (`CameraBounds`, `HardCollision`, `SoftCollision`, `Respawn`) | initialization/behavior C |
+| Power swap | `Game.swz.39.xml` `a6eb10c26320ba18da8a1067cae09258a28c6f6c0a1a27b1adf27c46a2946b6f` | class 341 `_-D4h`, method 6264 `_-ru` | loadout/behavior unresolved C |
+| Power | `Game.swz.38.dat` `715468d8eda8fa2ec3d88a8b5395c076bec937640927909add4745eda2883f27` | class 342 `PowerType`, method 6294 `_-L4o` | behavior C |
+| Rune | `Game.swz.42.xml` `13c32dfdc7ba3b5296c562bf69996b93b68f6b48dcdd226e15a0899f24d3e910` | class 393 `_-O5l`, method 7108 `_-9U` | initialization/behavior C |
+| Scoring | `Game.swz.43.xml` `fd9efadd2f3c6f7e844ec9c52b1f685fb15d32e936934450e36e441f3e182f7d` | class 406 `ScoringType`, method 7279 `_-yV` | behavior C |
+| Stat ladder | `Game.swz.52.xml` `0744728b58c6134f5d205236ae6a34c1f05d55c9f6b80f074f0f6cf1cb694692` | class 629 `_-92f`, method 11659 `_-j4W` | initialization/behavior C |
 
 `PowerTypes` contains `CastTime`, `Hurtbox`, damage, and impulse fields, but the inspected evidence does not locate per-frame offensive hitbox placement. `HurtboxTypes` provides body/hurtbox size records. This is a behavior-closure blocker, not permission to assume graphics are irrelevant.
 
@@ -132,7 +147,7 @@ For a headless behavior-only simulator, these may be stored as opaque replay val
 
 ## Necessary-and-sufficient manifest candidate
 
-This is a precise candidate, not a completeness claim.
+This is an internally specified candidate, not a completeness claim.
 
 ```json
 {
@@ -163,6 +178,8 @@ This is a precise candidate, not a completeness claim.
       "sourceId": "source-id",
       "sourceEntryOrdinal": 0,
       "sourceEntrySha256": "64-lowercase-hex",
+      "sourceEntryByteLength": 0,
+      "logicalRoot": "loader-defined-root-name",
       "sourceGrammar": "air-xml|game-delimited-v1|swf-timeline|other",
       "loader": { "classIndex": 0, "methodId": 0, "semanticSha256": "64-lowercase-hex" },
       "normalizedSha256": "64-lowercase-hex",
@@ -212,7 +229,7 @@ Required fields are all shown except fields marked by an empty array whose conte
 1. **Raw provenance:** SHA-256 exact container/archive/entry bytes before decoding.
 2. **Normalized data:** hash exact canonical semantic records plus loader semantic hash and source-entry hash. A normalized leaf cannot silently survive a loader-code change.
 3. **Executable rules:** hash class index, method ID, opcode/operand/control-flow representation, call/read edges, VM profile, and native dependencies. An opcode-only hash is insufficient.
-4. **Closure roots:** domain-separated Merkle roots over sorted logical member IDs and their leaf hashes. Source order remains a hashed field inside each leaf.
+4. **Closure roots:** domain-separated Merkle roots over sorted logical member IDs and their 32-byte member hashes. A dataset member hash is the raw 32 bytes named by `normalizedSha256`; a rule member hash is the raw 32 bytes of its canonical rule hash; a source member hash is the raw 32 bytes named by `sources[].sha256`. Let `H = SHA-256`, `U32(n)` be four-byte unsigned big-endian, and `UTF8(s)` be unprefixed UTF-8. A leaf is `H(UTF8("brawlhalla-closure-v1:leaf\0") || U32(idBytes.length) || idBytes || memberHash)`. Sort leaves by unsigned lexicographic `idBytes`. A node is `H(UTF8("brawlhalla-closure-v1:node\0") || leftHash || rightHash)`; duplicate the final hash at an odd-width level. A named root is `H(UTF8("brawlhalla-closure-v1:root\0") || U32(rootNameBytes.length) || rootNameBytes || U32(memberCount) || treeHash)`, where `rootName` is exactly `initialization`, `behavior`, or `oracle`. Empty roots and duplicate member IDs are invalid. Source order is represented in the canonical dataset bytes covered by `normalizedSha256`.
 5. **Per-replay selection:** derived resolution ledger from replay selectors to closure member IDs. It is not a replacement patch root.
 
 A member is necessary only after a deletion test shows some reachable replay-producing match fails initialization or changes behavior. Sufficiency requires every selector to resolve, every default to be explicit, and static/dynamic/native dependency traversal to terminate entirely inside the behavior root.
@@ -224,7 +241,7 @@ A member is necessary only after a deletion test shows some reachable replay-pro
 3. Preserve order unless AVM2 dataflow proves order-insensitivity: entity/loadout/taunt arrays, level elements, power phases, delimited rows, and registry overwrite order are ordered.
 4. Represent `uint`/`int` as exact 32-bit bit patterns. Represent AVM2 `Number` as an IEEE-754 binary64 hexadecimal bit string, preserving `-0`, infinities, and NaN policy. Record unit metadata only when proven. Do not silently convert source coordinates, frames, milliseconds, ratios, or percentages.
 5. Resolve inheritance/defaults into explicit fields while retaining a provenance pointer to every contributing source record and loader branch. Missing, inherited, and explicit-default values remain distinguishable in audit metadata.
-6. Canonical encoding candidate: UTF-8 RFC 8785 JSON with binary64 values encoded as tagged hex strings, object keys sorted by UTF-16 code units, arrays in source/runtime order, no insignificant whitespace, and LF termination. Hash the bytes with SHA-256.
+6. Canonical encoding candidate: RFC 8785 JSON serialized as UTF-8, with semantic binary64 values represented as tagged hexadecimal JSON strings before canonicalization and arrays retained in source/runtime order. Hash exactly the RFC 8785 bytes with SHA-256; do not append an LF or any other terminator.
 7. Reject duplicate logical IDs, unknown references, unresolved sentinels, non-finite values not accepted by the pinned loader, and normalized/source hash mismatch.
 
 Raw SWF/SWZ/XML/delimited artifacts are not required at runtime after a normalized dataset and executable-rule graph pass equivalence and deletion tests. They remain required to rebuild/audit provenance. Today they should be retained by the user because normalization and behavior closure are not complete. If rules are interpreted directly, `main.abc` and the specified AVM2/AIR native profile remain runtime members; a proved translation can replace them with hash-pinned IR.
@@ -279,11 +296,11 @@ after all entities:
 
 `genericBitsetScore(11)` is method 591: for each serialized uint word at word index `j`, add `(11 + j) * popcount32(word)`. Static method 1860 implements the standard parallel 32-bit popcount using masks `0x55555555`, `0x33333333`, `0x0f0f0f0f`, and multiplier `0x01010101`.
 
-Every `multiply_i` and `add_i` is followed by `convert_u`; equivalently, multiplication and addition wrap modulo 2^32 after each operation. At instructions 291-295 the final unsigned accumulator is reduced by AVM2 `% 173` and converted to `uint`. There is no byte serialization, string normalization, cryptographic hash, or archive input.
+The 298-instruction method contains 16 `multiply_i`, 23 `add_i`, and 57 `convert_u` instructions. Weighted-product accumulation has two exact groupings: 14 sites are `multiply_i`, `convert_u`, `add_i`, `convert_u`; two sites are `multiply_i`, `add_i`, `convert_u`. Five index-dependent weights use `add_i`, `multiply_i` before the product conversion. Other `add_i` instructions update loop/index or intermediate state and are not all immediately followed by `convert_u`. The converted accumulator stores make the calculation equivalent to multiplication and addition modulo 2^32. At instructions 291-295 the final unsigned accumulator is reduced by AVM2 `% 173` and converted to `uint`. There is no byte serialization, string normalization, cryptographic hash, or archive input.
 
 ### Reader comparison
 
-**P.** Reader method 6510 reads the stored state-4 `u32` at instructions 580-584. At 787-803, if the restored `LevelType` is non-null and entity array `_-I1a` is nonempty, it calls the same `_-U6c(_-I1a, _-fq._-Y1H, heroCount)`, compares direct equality with the stored word, and sets the reader-valid boolean false on mismatch. It skips this comparison when the level is null or roster empty. A simulator/validator should be stricter and reject those malformed prerequisites before checksum comparison.
+**P.** Reader method 6510 reads the stored state-4 `u32` at instructions 580-584. Its short-circuit guards at 765-785 skip comparison when `heroCount` is zero, restored `LevelType` is null, or entity array `_-I1a` is empty. Otherwise, at 787-803, it calls the same `_-U6c(_-I1a, _-fq._-Y1H, heroCount)`, compares direct equality with the stored word, and sets the reader-valid boolean false on mismatch. A simulator/validator should be stricter and reject those malformed prerequisites before checksum comparison.
 
 The provenance command reproduced all 12 authentic fixtures exactly. Pre-modulus accumulators ranged from `357131407` to `962077826`; stored/calculated values were `98, 68, 166, 152, 1, 9, 81, 97, 0, 90, 87, 22` in manifest order. Corpus manifest SHA-256 is `b044…d1ac`.
 
@@ -323,8 +340,8 @@ Never substitute zero, current-patch data, closest name/ID, host collection orde
 - SWF/SWZ/ABC, decrypted entries, raw replays, bulk tables, and player/account fields remain ignored and user-owned. None are committed by this work.
 - The committed artifact contains hashes, category inventory, method/config identifiers, formulas, and a focused analysis command only.
 - A normalized proprietary table may still be a derivative bulk asset and must not be committed. Publish schemas, hashes, counts, and tiny synthetic fixtures instead.
-- Replay hashes are provenance identifiers. Names, Brawlhalla IDs, source filenames, timestamps, and local paths are excluded.
-- The provenance command requires users to supply lawful local inputs and does not decrypt or export archives.
+- Replay hashes are provenance identifiers. Successful JSON excludes names, Brawlhalla IDs, manifest fixture filenames, timestamps, and local paths. Process, filesystem, or runtime diagnostics may expose a user-supplied local path.
+- Custom validation errors use logical input labels or fixture indices rather than manifest filenames where a filename is unnecessary. The provenance command requires users to supply lawful local inputs and does not decrypt or export archives.
 
 ## Ticket-ready residual questions
 
@@ -359,7 +376,7 @@ Never substitute zero, current-patch data, closest name/ID, host collection orde
 ### 5. Prove loader normalization and defaults
 
 - **Question:** What exact AIR XML and game-delimited grammar, template inheritance, duplicate policy, numeric coercion, and registry insertion order do the parser methods implement?
-- **Starting evidence:** unique parser methods and exact source entry hashes in this report; some extracted XML is not accepted by a generic strict XML parser, proving generic-tool equivalence cannot be assumed.
+- **Starting evidence:** unique string-conjunction candidate methods and exact source entry hashes in this report; no parser control/dataflow proof is claimed. Some extracted XML is not accepted by a generic strict XML parser, proving generic-tool equivalence cannot be assumed.
 - **Required evidence:** Instruction-level traces for loader helpers and representative absent/empty/sentinel/template/duplicate/numeric cases.
 - **Acceptance:** A canonical normalizer reproduces loader objects field-for-field on all relevant entries, has mutation tests for every default branch, and produces stable leaf hashes.
 
@@ -395,7 +412,7 @@ Never substitute zero, current-patch data, closest name/ID, host collection orde
 
 1. **Implement a privacy-safe format-268 `gameDataChecksum` verifier.** The exact formula, arithmetic, writer inputs, and reader behavior are now proven. It must preserve generic bitset words, packed weapon word, loadout order, and all three handicap words.
 2. **Define closure-manifest schema 1 and a fail-closed validator.** Implement structure/hash validation only; do not claim behavior completeness until issue #4 residuals close.
-3. **Build method/dataset dependency graph extraction.** Start with the unique parser methods in this report and emit identifiers/hashes/edges, not decompiled proprietary bodies.
+3. **Build method/dataset dependency graph extraction.** Start with the unique string-conjunction candidate methods in this report, prove parser links by control/dataflow, and emit identifiers/hashes/edges, not decompiled proprietary bodies.
 4. **Specify canonical numeric/data encoding.** Gate implementation on the loader-normalization ticket, particularly AIR XML/delimited and binary64 semantics.
 
 Issue #4 remains open: checksum semantics are resolved, but complete initialization and behavior closure are not.
