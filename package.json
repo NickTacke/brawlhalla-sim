@@ -13,7 +13,8 @@
     "format": "biome format --write .",
     "provenance:movement": "bun run --cwd tools/avm2-provenance movement-provenance",
     "provenance:game-settings-word-14": "bun run --cwd tools/avm2-provenance build-dependency && bun tools/avm2-provenance/game_settings_word_14_provenance.ts",
-    "provenance:replay-handicap-modifier-order": "bun run --cwd tools/avm2-provenance replay-handicap-modifier-order-provenance"
+    "provenance:replay-handicap-modifier-order": "bun run --cwd tools/avm2-provenance replay-handicap-modifier-order-provenance",
+    "provenance:handicap-mutation-policy": "bun run --cwd tools/avm2-provenance handicap-mutation-policy-provenance"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.0",
