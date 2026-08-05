@@ -13,7 +13,8 @@
     "format": "biome format --write .",
     "provenance:movement": "bun run --cwd tools/avm2-provenance movement-provenance",
     "provenance:game-settings-word-14": "bun run --cwd tools/avm2-provenance build-dependency && bun tools/avm2-provenance/game_settings_word_14_provenance.ts",
-    "provenance:packed-weapon-flags": "bun run --cwd tools/avm2-provenance build-dependency && bun run --cwd tools/avm2-provenance packed-weapon-flags-provenance"
+    "provenance:packed-weapon-flags": "bun run --cwd tools/avm2-provenance build-dependency && bun run --cwd tools/avm2-provenance packed-weapon-flags-provenance",
+    "provenance:weapon-order-producer-policy": "bun run --cwd tools/avm2-provenance build-dependency && bun run --cwd tools/avm2-provenance weapon-order-producer-policy-provenance"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.0",
