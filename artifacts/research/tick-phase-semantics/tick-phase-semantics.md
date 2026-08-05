@@ -27,7 +27,7 @@ All static claims in this artifact refer to this primary source:
 
 `pc` means original method-local byte offset. `i` means regenerated zero-based instruction ordinal. Byte PCs are authoritative for instrumentation. Some ignored legacy `disasm_*.txt` files label constant-pool names incorrectly because they omit the required `strings[index - 1]`; their opcode structure remains useful but their rendered identifiers are not authority.
 
-Reproduce the central scheduler, phase, timestamp-source, and hook claims without emitting bytecode or local paths:
+Reproduce selected structural anchors used by the scheduler, phase, timestamp-source, and hook analysis without emitting bytecode or local paths:
 
 ```bash
 shasum -a 256 artifacts/main.abc
@@ -36,7 +36,7 @@ bun run provenance:tick-phases
 bun run provenance:movement
 ```
 
-`provenance:tick-phases` hash-gates the ABC and sole build string, decodes all bodies, checks raw opcodes and byte-PC branch targets, resolves names with `strings[index - 1]`, asserts the narrow sites cited below, and emits privacy-safe JSON. `provenance:movement` independently resolves input insertion/sampling, jump edge, pending impulse, movement, gravity, and motion-delta dataflow.
+`provenance:tick-phases` hash-gates the ABC and sole build string, decodes all bodies, checks raw opcodes and byte-PC branch targets, resolves names with `strings[index - 1]`, and verifies selected opcode/property anchors plus the two hook cardinalities. Its JSON report explicitly excludes full call-chain, branch, argument, dataflow, subsystem-semantic, and section-order attestation. Those decisions come from the cited static analysis and independent review, not the command alone. Expected verification failures also emit path-free JSON. `provenance:movement` independently resolves input insertion/sampling, jump edge, pending impulse, movement, gravity, and motion-delta dataflow.
 
 ## Corrected scheduler and hook decision
 
@@ -267,7 +267,7 @@ In ordinary death method 3040, attacker attribution precedes fighter method 2949
 
 After 2949 returns, method 3040 decrements lives. Standard placement is rebuilt later in method 6953, before terminal result serialization.
 
-Event constructor 5751 stores its third argument directly in `mTimeStamp`. Factory 5763 creates the event with the KO-resolution tick and immediately queues it through method 5768. Method 5768 inserts before the first existing event whose timestamp is less than or equal to the new timestamp, otherwise appending, so storage and serialization are newest-first. Writer 6522 filters state-5 types 2, 3, and 9. The authentic timed-FFA cohort contains 161 aligned records and no duplicate event timestamps; type 3's producer/name remains unknown.
+Event constructor 5751 stores its third argument directly in `mTimeStamp`. Factory 5763 creates the event with the KO-resolution tick and immediately queues it through method 5768. Method 5768 inserts before the first existing event whose timestamp is less than or equal to the new timestamp, otherwise appending, so storage and serialization are newest-first. Writer 6522 filters state-5 types 2, 3, and 9. The authentic timed-FFA cohort contains 161 aligned records and no duplicate event timestamps within any individual replay; type 3's producer/name remains unknown.
 
 ## Timestamp contract
 
