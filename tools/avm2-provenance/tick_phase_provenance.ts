@@ -213,7 +213,7 @@ const requiredMethods = new Map<number, [string, string]>([
 for (const [methodId, expected] of requiredMethods) {
   const owner = owners.get(methodId)
   if (!owner || owner.className !== expected[0] || owner.traitName !== expected[1]) {
-    throw new VerificationError(`method ${methodId} owner mismatch: ${JSON.stringify(owner)}`)
+    throw new VerificationError(`method ${methodId} owner mismatch`)
   }
 }
 
@@ -305,7 +305,6 @@ const report = {
   decoder: { methodsDecoded: methods.size, branchTargetsValid: true, multinameStringIndex: 'index - 1' },
   authoritativeTick: {
     methodId: 3217,
-    owner: owners.get(3217),
     beginHookOriginalBytePc: 1916,
     completionHookOriginalBytePc: 4051,
     timestampPublicationCount: timestampPublications.length,
@@ -313,7 +312,6 @@ const report = {
   },
   rejectedTickCandidate: {
     methodId: 3273,
-    owner: owners.get(3273),
     lifecycleTickPropertyReferenceCount: forbiddenCoordinatorReferences.length,
     frameCallbackPropertyReferencePc: 302,
   },
