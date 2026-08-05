@@ -2,11 +2,13 @@
 
 Issue: [Establish a non-live interpreted reference oracle](https://github.com/NickTacke/brawlhalla-sim/issues/5)
 
-## Decision and present status
+## Resolved planning decision and present status
 
-Prototype one hash-pinned, headless Ruffle `core` embedder at commit [`6e69eaf89a5b0258920f4f1f0e4b7ce25acd0943`](https://github.com/ruffle-rs/ruffle/tree/6e69eaf89a5b0258920f4f1f0e4b7ce25acd0943). Load the complete AIR application boundary, patch every reached state-influencing host service behind one deterministic interface, instrument a verified copy of the target ABC at narrow method and byte-PC boundaries, and emit authenticated canonical traces.
+Select one hash-pinned, headless Ruffle `core` embedder at commit [`6e69eaf89a5b0258920f4f1f0e4b7ce25acd0943`](https://github.com/ruffle-rs/ruffle/tree/6e69eaf89a5b0258920f4f1f0e4b7ce25acd0943). It must load the complete AIR application boundary, route every reached state-influencing host service through one deterministic deny-by-default interface, instrument only an independently verified copy of the target application at authenticated method and byte-PC boundaries, and emit canonical traces through the authenticated channel specified below.
 
-This is a conditional architecture recommendation. No target AIR boot, match initialization, or interpreted target trace has run. Stock Ruffle is nondeterministic and has material AIR stubs. [Establish a non-live interpreted reference oracle](https://github.com/NickTacke/brawlhalla-sim/issues/5) remains open.
+This resolves the planning question in [Establish a non-live interpreted reference oracle](https://github.com/NickTacke/brawlhalla-sim/issues/5). No genuine oracle architecture decision remains unresolved, so this artifact recommends closing that planning ticket with the chosen architecture and acceptance contract. Closure records a complete implementation handoff, not a functioning or runtime-accepted oracle.
+
+No trustworthy trace currently exists. No target AIR boot, match initialization, or interpreted target trace has run, and implementation feasibility remains unproven. Stock Ruffle is nondeterministic and has material AIR stubs.
 
 Live-client capture is excluded. The official Brawlhalla application must never be instrumented, modified, or used to produce game traces. An authorized Adobe or HARMAN AIR installation may run only tiny, non-game synthetic VM, AIR-native, and lifecycle microtests. Those goldens must contain no Brawlhalla bytecode, resources, state, or events.
 
@@ -25,11 +27,11 @@ A raw-ABC evaluator is not the minimal oracle. It omits SWF ordering, applicatio
 | --- | --- | --- |
 | T0, identified | Application, runtime source, patches, transformations, harness, toolchain, capability profile, and fixture identities are hash-pinned. | Partial. Local identities and upstream commits are known; no harness or transformed application exists. |
 | T1, booted | The complete declared AIR application reaches an offline match-ready boundary with every descriptor, extension, native call, resource read, and prohibited capability classified. | Not reached. |
-| T2, prototype feasibility | At least one authentic replay completes twice in fresh processes with byte-identical interpreted target traces in optimizer-on and optimizer-off modes, with all fail-closed gates active. | Not reached. T2 proves only that the prototype can execute deterministically. It is not trustworthy reference status and cannot resolve the issue. |
-| T3, reviewed-corpus interpreted reference | Layered conformance passes and actual interpreted target traces complete for all 12 reviewed fixtures on x64 and arm64, in optimizer-on and optimizer-off modes, with byte-identical repeatability and reviewer approval. | Not reached. This is the minimum issue-closure level and the minimum for calling a trace trustworthy for the reviewed corpus. |
+| T2, prototype feasibility | At least one authentic replay completes twice in fresh processes with byte-identical interpreted target traces in optimizer-on and optimizer-off modes, with all fail-closed gates active. | Not reached. T2 proves only that the prototype can execute deterministically. It is not trustworthy reference status. |
+| T3, reviewed-corpus interpreted reference | Layered conformance passes and actual interpreted target traces complete for all 12 reviewed fixtures on x64 and arm64, in optimizer-on and optimizer-off modes, with byte-identical repeatability and reviewer approval. | Not reached. This is the mandatory runtime acceptance level before any produced trace may be called a trustworthy `reviewed-corpus interpreted reference`; it is not required to close the planning ticket. |
 | T4, declared-scope interpreted reference | Coverage and conformance pass for every declared replay-producing configuration, including generated negative and boundary cases. | Not reached. The reviewed corpus is too narrow. |
 
-Ticket closure requires an actual T3 interpreted target trace, not a plan, boot log, synthetic microtest, or T2 repeatability result. This correction pass produces none.
+The exact trust contract is conjunctive: a trustworthy `reviewed-corpus interpreted reference` trace must come from the hash-pinned complete-AIR-application Ruffle architecture selected here; bind every identity in `oracleArtifactSetId`; cover all 12 pinned fixtures; and pass the complete application, deterministic `OracleHostServices`, deny-by-default capability, independent ABC-verifier, authenticated-instrumentation, optimizer-on/off equality, 100-fresh-process repeatability, x64/arm64 equality, layered conformance, corpus-consistency, privacy, and independent-review gates. Any missing gate leaves the output untrusted. Planning-ticket closure accepts this specification only and neither waives T3 nor asserts that a trace exists.
 
 ## What layered T3 can and cannot prove
 
@@ -159,7 +161,7 @@ The reviewed installed macOS application has descriptor ID `BrawlhallaAir`, prof
 
 Duplicate framework aliases with identical hashes are one payload identity, not independent evidence. Every other top-level packaged SWF is **unresolved**, not silently excluded. [Classify startup and visual asset membership](https://github.com/NickTacke/brawlhalla-sim/issues/38) must classify each asset family, and [Prove patch closure minimality and sufficiency](https://github.com/NickTacke/brawlhalla-sim/issues/39) must deletion-test the resulting closure. No proprietary member is committed.
 
-Ruffle maps AIR APIs only through AIR 29 at this commit in [`api_version.rs`](https://github.com/ruffle-rs/ruffle/blob/6e69eaf89a5b0258920f4f1f0e4b7ce25acd0943/core/src/avm2/api_version.rs#L87-L101) and [`api_version.rs`](https://github.com/ruffle-rs/ruffle/blob/6e69eaf89a5b0258920f4f1f0e4b7ce25acd0943/core/src/avm2/api_version.rs#L244-L259). The AIR 32 target is therefore an explicit compatibility blocker until every statically reachable API/member has a disposition and conformance result.
+Ruffle maps AIR APIs only through AIR 29 at this commit in [`api_version.rs`](https://github.com/ruffle-rs/ruffle/blob/6e69eaf89a5b0258920f4f1f0e4b7ce25acd0943/core/src/avm2/api_version.rs#L87-L101) and [`api_version.rs`](https://github.com/ruffle-rs/ruffle/blob/6e69eaf89a5b0258920f4f1f0e4b7ce25acd0943/core/src/avm2/api_version.rs#L244-L259). The AIR 32 target is therefore an explicit runtime acceptance blocker until every statically reachable API/member has a disposition and conformance result. It does not reopen the architecture decision.
 
 ## Minimal architecture and hash gates
 
@@ -313,9 +315,9 @@ These are non-attested planning ranges, not measurements, commitments, or feasib
 
 A T2 spike is a non-attested planning range of 6-12 engineer-weeks. T3 is a non-attested planning range of 10-20+ engineer-weeks and may expand materially. Neither range claims that the target boots or that the architecture will reach T3.
 
-## Existing Wayfinder ownership
+## Genuine unresolved Wayfinder domain decisions
 
-Do not create duplicate oracle tickets for simulator-domain questions. Reuse these linked tickets:
+The linked tickets below own unresolved domain facts or policy choices that supply parameters to this specification. Retain them rather than duplicating them as oracle tickets. They can change hooks, fields, fixtures, adapters, or declared scope, but none reopens the selected Ruffle architecture or blocks closure of the planning ticket:
 
 - randomness: [Recover deterministic randomness and draw ordering](https://github.com/NickTacke/brawlhalla-sim/issues/6);
 - ticks and timestamp phases: [Recover authoritative tick phases and timestamp semantics](https://github.com/NickTacke/brawlhalla-sim/issues/7);
@@ -332,7 +334,9 @@ Do not create duplicate oracle tickets for simulator-domain questions. Reuse the
 - startup and visual assets: [Classify startup and visual asset membership](https://github.com/NickTacke/brawlhalla-sim/issues/38);
 - final closure proof: [Prove patch closure minimality and sufficiency](https://github.com/NickTacke/brawlhalla-sim/issues/39).
 
-## Genuinely oracle-specific residual work
+## Implementation handoff outside the Wayfinder map
+
+The four work packages below build and validate the selected design. They are implementation handoff items, not residual Wayfinder decisions, new tickets, or blockers to closing the planning map. Their acceptance gates remain mandatory for the runtime trust level they claim.
 
 ### Build the deterministic Ruffle host-services patch
 
@@ -354,12 +358,12 @@ Do not create duplicate oracle tickets for simulator-domain questions. Reuse the
 
 ### Produce and review the first T3 interpreted target trace
 
-- **Start:** T3 definition, layered ladder, complete capability profile, closed domain tickets above, and the pinned 12-fixture manifest.
+- **Start:** T3 definition, layered ladder, complete capability profile, resolved domain specifications above, and the pinned 12-fixture manifest.
 - **Evidence:** actual patched-Ruffle target traces, synthetic AIR/lifecycle goldens, avmplus and Lightspark result ledger, static target closure, 100-run and architecture/optimizer matrices, corpus invariants, and privacy report.
-- **Acceptance:** every T3 gate passes with zero unexplained difference and reviewer approval. Only then may [Establish a non-live interpreted reference oracle](https://github.com/NickTacke/brawlhalla-sim/issues/5) close.
+- **Acceptance:** every T3 gate passes with zero unexplained difference and reviewer approval. Only then may any produced trace be called a trustworthy `reviewed-corpus interpreted reference`; issue 5 planning closure does not make that runtime claim.
 
 ## Fail-closed summary
 
 No trace is valid after a hash mismatch, incomplete application identity, unresolved descriptor/extension/native/resource member, independent-verifier failure, Ruffle verifier failure, optimizer divergence, unknown opcode, unresolved dispatch, unhandled exception, compatibility-stub default, undeclared host service, host-boundary bypass, prohibited I/O, native payload execution, wall-clock or entropy read, nondeterministic ordering, lifecycle ambiguity, instrumentation mismatch, reserved-call authentication failure, invalid branch/exception range, renderer-dependent state, scheduler anomaly, privacy violation, crash, hang, or sandbox kill.
 
-No open-source candidate proves official Adobe/HARMAN AIR game semantics, and this design deliberately obtains no official game traces. Target feasibility remains unknown until the complete application boots and T2 runs. Trustworthy reviewed-corpus status remains unearned until actual T3 interpreted target traces pass the layered contract.
+No open-source candidate proves official Adobe/HARMAN AIR game semantics, and this design deliberately obtains no official game traces. Target feasibility and implementation remain unproven until the complete application boots and T2 runs. No trustworthy trace currently exists, and trustworthy reviewed-corpus status remains unearned until actual T3 interpreted target traces pass the layered contract. Those implementation facts do not leave an oracle architecture decision unresolved.
