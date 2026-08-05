@@ -6,7 +6,7 @@ Issue: [Prove the format-268 header seed field](https://github.com/NickTacke/bra
 
 **Proven.** The first state-3 `u32` is the **match random seed**. This is no longer an inferred parser label.
 
-The writer serializes the initialized match object's `_-l4` word. The replay reader restores that word to its own `_-l4` slot and passes it unchanged as the explicit seed argument to the same match initializer used by live matches. When that argument is omitted, the initializer obtains a fresh value from a field whose declared type is `Random`. The initializer stores the value as the match's `_-l4`, then seeds exactly two independently constructed `Random` objects with it:
+The writer receives the match initializer's effective seed. Two setup paths reread the initialized match object's `_-l4` word; a third setup path forwards the same explicit network word to both the initializer and writer without rereading `_-l4`. The replay reader restores the serialized word to its own `_-l4` slot and passes it unchanged as the explicit seed argument to the same match initializer used by live matches. When that argument is omitted, the initializer obtains a fresh value from a field whose declared type is `Random`. The initializer stores the value as the match's `_-l4`, then seeds exactly two independently constructed `Random` objects with it:
 
 1. class 253 `_-61q._-p38`, the item/weapon/gadget spawning stream;
 2. class 382 `_-a1B._-p38`, the global rules/mode stream shared by mode rules and other gameplay systems.
@@ -42,6 +42,7 @@ Primary method map:
 | Format-268 reader | class 356 `_-E4h._-N4v`, method 6510 | `661-665`, `728-738` |
 | State-3 writer | class 357 `_-16._-63H`, method 6518 | `41-58` |
 | Writer construction/header call | class 164 `_-u16._-fN`, method 3368 | `26-53` |
+| Network link match/writer setup | class 281 `LinkUpdater._-E2t`, method 5257 | `69-78`, `206-234` |
 | Replay parse and handoff | class 164 `_-u16._-144`, method 3272 | `16-25`, `43-72` |
 | Replay match load | class 164 `_-u16._-H4o`, method 3507 | `249-262`, `282-669` |
 | Match initializer | class 164 `_-u16._-T3Q`, method 3229 | `46-164` |
@@ -59,12 +60,13 @@ Method 6518 receives `(uint, uint, Boolean)`. It writes state 3 through `_-PY(4,
 
 Method 3368 constructs the replay writer at PCs `26-40`, then forwards its own three arguments unchanged to method 6518 at PCs `40-53`.
 
-The two replay-recording setup paths prove the first argument's source:
+The exact QName 26,576 `_-fN` has three and only three call sites:
 
 - method 3282 initializes a match with an explicit network-supplied seed at PCs `317-327`, then reads match `_-l4` and calls method 3368 at PCs `346-366`;
-- method 3514 initializes a local match with the optional seed omitted at PCs `119-128`, then reads the resulting match `_-l4` and calls method 3368 at PCs `164-184`.
+- method 3514 initializes a local match with the optional seed omitted at PCs `119-128`, then reads the resulting match `_-l4` and calls method 3368 at PCs `164-184`;
+- method 5257 `LinkUpdater._-E2t` reads a network word into local 3 at PCs `69-78`, passes local 3 as the explicit seed argument to `_-T3Q` at PCs `206-219`, then passes that same local directly to `_-fN` at PCs `219-234`. It does not reread match `_-l4` between initialization and writer setup.
 
-Thus state-3 word 1 is the initialized match's `_-l4`, not a writer-local value.
+The first two paths serialize the initialized match's `_-l4`. The third serializes the same explicit word that the initializer uses unchanged and assigns to `_-l4`. Thus all exact writer callers serialize the initializer's effective seed, but only two use a `match._-l4 -> writer` read chain.
 
 ### Reader and replay handoff
 
@@ -72,7 +74,7 @@ Reader method 6510's state-3 branch begins at PC `660`. It reads a `u32` through
 
 After the entire replay parses successfully, method 3272 reads `reader._-l4` at PCs `63-67` and calls replay loader method 3507 with `(reader, reader._-l4)` at PCs `57-72`. Method 3507 passes `reader._-fq` (the restored level) and its seed parameter to match initializer method 3229 at PCs `249-262`. No conversion, mask, arithmetic, or alternate source intervenes.
 
-This proves exact roundtrip identity:
+For the two match-field setup paths, this proves exact roundtrip identity:
 
 ```text
 match._-l4
@@ -84,6 +86,14 @@ match._-l4
   -> method 3507 argument 2
   -> method 3229 explicit seed argument
   -> restored match._-l4
+```
+
+The third setup path joins the same chain at method 3368 without a field reread:
+
+```text
+network word in method 5257 local 3
+  |-> method 3229 explicit seed argument -> match._-l4
+  `-> method 3368 argument 1 -> method 6518 state-3 first u32
 ```
 
 ## Why the semantic name is definitive
@@ -208,11 +218,13 @@ build: 10.09.96325
 abcSha256: 9fe9c83051343d5b0f667b44e87e6779854f7ee92b1014b279e033fc2bcfba2d
 decodedBodies: 15010
 branchTargets: valid
+writerMethod.multinameIndex: 26576
+writerMethod.exactCallerCount: 3 (methods 3282, 3514, 5257)
 seedTrait.exactReferenceCount: 16
 seedTargets: class 253 item spawning Random; class 382 rules and modes Random
 ```
 
-The report also emits the exact method/PC ledger and controlled RNG vectors. It excludes bytecode, strings unrelated to the bounded proof, local paths, replay payload, player data, and generated dumps.
+The report also emits the exact method/PC ledger, the closed three-site caller set for exact QName 26,576 `_-fN`, complete opcode/operand fingerprints for the two `Random` methods, and controlled RNG vectors. It excludes bytecode, strings unrelated to the bounded proof, local paths, replay payload, player data, and generated dumps.
 
 Normative runtime semantics used for the controlled calculation:
 

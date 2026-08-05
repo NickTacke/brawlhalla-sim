@@ -33,6 +33,7 @@ type Site = {
   end: number
   operation: string
   property?: string
+  operand?: number
 }
 
 const { AbcFile, ExtendedBuffer, InstructionDisassembler } = require('abc-disassembler') as AbcDisassemblerModule
@@ -237,6 +238,7 @@ const expectedOwners = new Map<number, [number, string, string]>([
   [3507, [164, '_-u16', '_-H4o']],
   [3514, [164, '_-u16', '_-E4G']],
   [4780, [253, '_-61q', '_-h2u']],
+  [5257, [281, 'LinkUpdater', '_-E2t']],
   [6510, [356, '_-E4h', '_-N4v']],
   [6518, [357, '_-16', '_-63H']],
   [6869, [378, '_-H4f', '_-k3V']],
@@ -263,6 +265,9 @@ function instructionAt(site: Site): LocatedInstruction {
   }
   if (site.property && instructionProperty(instruction, strings) !== site.property) {
     throw new VerificationError(`${site.label}: property mismatch`)
+  }
+  if (site.operand !== undefined && instruction.params[0] !== site.operand) {
+    throw new VerificationError(`${site.label}: operand mismatch`)
   }
   return instruction
 }
@@ -294,6 +299,87 @@ const sites: Site[] = [
     property: '_-S2c',
   },
   { label: 'writer header call', methodId: 3368, start: 49, end: 53, operation: 'callpropvoid', property: '_-63H' },
+  {
+    label: 'online match writer call',
+    methodId: 3282,
+    start: 361,
+    end: 366,
+    operation: 'callpropvoid',
+    property: '_-fN',
+  },
+  {
+    label: 'local match writer call',
+    methodId: 3514,
+    start: 179,
+    end: 184,
+    operation: 'callpropvoid',
+    property: '_-fN',
+  },
+  { label: 'link seed network read receiver', methodId: 5257, start: 69, end: 70, operation: 'getlocal_1' },
+  {
+    label: 'link seed network read',
+    methodId: 5257,
+    start: 70,
+    end: 75,
+    operation: 'callproperty',
+    property: '_-A17',
+  },
+  { label: 'link seed first uint conversion', methodId: 5257, start: 75, end: 76, operation: 'convert_u' },
+  { label: 'link seed second uint conversion', methodId: 5257, start: 76, end: 77, operation: 'convert_u' },
+  { label: 'link seed local-3 store', methodId: 5257, start: 77, end: 78, operation: 'setlocal_3' },
+  {
+    label: 'link initializer receiver lookup',
+    methodId: 5257,
+    start: 206,
+    end: 209,
+    operation: 'findproperty',
+    property: '_-Z2h',
+  },
+  {
+    label: 'link initializer receiver read',
+    methodId: 5257,
+    start: 209,
+    end: 212,
+    operation: 'getproperty',
+    property: '_-Z2h',
+  },
+  { label: 'link initializer level argument', methodId: 5257, start: 212, end: 214, operation: 'getlocal', operand: 8 },
+  { label: 'link initializer seed argument', methodId: 5257, start: 214, end: 215, operation: 'getlocal_3' },
+  {
+    label: 'link match initialization',
+    methodId: 5257,
+    start: 215,
+    end: 219,
+    operation: 'callpropvoid',
+    property: '_-T3Q',
+  },
+  {
+    label: 'link writer receiver lookup',
+    methodId: 5257,
+    start: 219,
+    end: 222,
+    operation: 'findproperty',
+    property: '_-Z2h',
+  },
+  {
+    label: 'link writer receiver read',
+    methodId: 5257,
+    start: 222,
+    end: 225,
+    operation: 'getproperty',
+    property: '_-Z2h',
+  },
+  { label: 'link writer seed argument', methodId: 5257, start: 225, end: 226, operation: 'getlocal_3' },
+  { label: 'link writer playlist argument', methodId: 5257, start: 226, end: 228, operation: 'getlocal', operand: 5 },
+  { label: 'link writer online argument', methodId: 5257, start: 228, end: 229, operation: 'pushtrue' },
+  {
+    label: 'link writer call',
+    methodId: 5257,
+    start: 229,
+    end: 234,
+    operation: 'callpropvoid',
+    property: '_-fN',
+  },
   {
     label: 'replay seed argument read',
     methodId: 3272,
@@ -378,6 +464,54 @@ if ((seedMultiplier.params[0] as number) >>> 0 !== 1_812_433_253) {
 }
 if ((temperingMask.params[0] as number) >>> 0 !== 0xda44_2d24) {
   throw new VerificationError('Random output tempering mask mismatch')
+}
+
+const writerMultinameIndex = 26_576
+const writerMultiname = multinames[writerMultinameIndex - 1]
+if (multinameName(writerMultiname, strings) !== '_-fN') {
+  throw new VerificationError('writer method multiname mismatch')
+}
+const writerTrait = abc.instance[164].trait.find((trait: any) => trait.data?.method === 3368)
+if (!writerTrait || multinames[writerTrait.name - 1] !== writerMultiname) {
+  throw new VerificationError('writer method exact trait mismatch')
+}
+const writerReferences: Array<{
+  methodId: number
+  owner: string
+  bytePc: string
+  operation: string
+}> = []
+for (const method of methods.values()) {
+  for (const instruction of method.instructions) {
+    if (!instruction.params.some((parameter) => parameter === writerMultiname)) continue
+    const owner = owners.get(method.methodId)
+    writerReferences.push({
+      methodId: method.methodId,
+      owner: owner ? `${owner.className}.${owner.traitName}` : 'unowned',
+      bytePc: `${instruction.start}-${instruction.end}`,
+      operation: instruction.name,
+    })
+  }
+}
+const writerReferenceKey = writerReferences.map(
+  (reference) => `${reference.methodId}:${reference.bytePc}:${reference.operation}`,
+)
+const expectedWriterReferenceKey = [
+  '3282:346-350:findproperty',
+  '3282:361-366:callpropvoid',
+  '3514:164-168:findproperty',
+  '3514:179-184:callpropvoid',
+  '5257:229-234:callpropvoid',
+]
+if (JSON.stringify(writerReferenceKey) !== JSON.stringify(expectedWriterReferenceKey)) {
+  throw new VerificationError('writer method exact-xref closure mismatch')
+}
+const writerCallerKey = writerReferences
+  .filter((reference) => reference.operation === 'callpropvoid')
+  .map((reference) => `${reference.methodId}:${reference.bytePc}`)
+const expectedWriterCallerKey = ['3282:361-366', '3514:179-184', '5257:229-234']
+if (JSON.stringify(writerCallerKey) !== JSON.stringify(expectedWriterCallerKey)) {
+  throw new VerificationError('writer method exact caller closure mismatch')
 }
 
 const readerRestore = instructionAt(sites[1])
@@ -466,16 +600,27 @@ if (!defaultSeedSource) throw new VerificationError('default match-seed Random s
 const seedMethod = methods.get(1797)
 const nextMethod = methods.get(1799)
 if (!seedMethod || !nextMethod) throw new VerificationError('Random methods missing')
-const requiredSeedOperations = ['bitand', 'urshift', 'bitxor', 'multiply_i', 'add_i']
-const requiredNextOperations = ['lshift', 'urshift', 'bitand', 'bitxor', 'add_i']
-for (const operation of requiredSeedOperations) {
-  if (!seedMethod.instructions.some((instruction) => instruction.name === operation)) {
-    throw new VerificationError(`Random seed operation ${operation} missing`)
+const randomMethodFingerprints = [
+  {
+    methodId: 1797,
+    instructionCount: 61,
+    opcodeOperandSha256: 'bde5c989dc6e01548b4324c81073061342fb304520f16fb75f12b9c5ed5dc59c',
+  },
+  {
+    methodId: 1799,
+    instructionCount: 132,
+    opcodeOperandSha256: '67cf679291457455e86d31eb4c21f627a6208b45d90e9c6710724203d41da03b',
+  },
+]
+for (const expected of randomMethodFingerprints) {
+  const method = methods.get(expected.methodId)
+  const body = abc.method_body.find((candidate: any) => candidate.method === expected.methodId)
+  if (!method || !body || method.instructions.length !== expected.instructionCount) {
+    throw new VerificationError(`Random method ${expected.methodId} instruction sequence mismatch`)
   }
-}
-for (const operation of requiredNextOperations) {
-  if (!nextMethod.instructions.some((instruction) => instruction.name === operation)) {
-    throw new VerificationError(`Random output operation ${operation} missing`)
+  const opcodeOperandSha256 = createHash('sha256').update(new Uint8Array(body.code)).digest('hex')
+  if (opcodeOperandSha256 !== expected.opcodeOperandSha256) {
+    throw new VerificationError(`Random method ${expected.methodId} opcode/operand sequence mismatch`)
   }
 }
 
@@ -483,8 +628,15 @@ const vectors = [0, 1, 255, 256, 0xffff_ffff].map((seed) => ({
   seed,
   firstFourOutputs: randomOutputs(seed, 4),
 }))
-if (JSON.stringify(vectors[0].firstFourOutputs) !== JSON.stringify(vectors[3].firstFourOutputs)) {
-  throw new VerificationError('controlled low-byte seed collision vector mismatch')
+const expectedVectors = [
+  { seed: 0, firstFourOutputs: [3664512821, 3578536085, 3671592843, 2940218815] },
+  { seed: 1, firstFourOutputs: [541330531, 3767533875, 2226135129, 3006268673] },
+  { seed: 255, firstFourOutputs: [2607024047, 3190304111, 254552081, 3792179193] },
+  { seed: 256, firstFourOutputs: [3664512821, 3578536085, 3671592843, 2940218815] },
+  { seed: 0xffff_ffff, firstFourOutputs: [2607024047, 3190304111, 254552081, 3792179193] },
+]
+if (JSON.stringify(vectors) !== JSON.stringify(expectedVectors)) {
+  throw new VerificationError('controlled Random vectors mismatch')
 }
 
 process.stdout.write(
@@ -496,6 +648,13 @@ process.stdout.write(
         abcSha256: sha256,
         decodedBodies: methods.size,
         branchTargets: 'valid',
+      },
+      writerMethod: {
+        multinameIndex: writerMultinameIndex,
+        name: '_-fN',
+        exactReferenceCount: writerReferences.length,
+        exactCallerCount: writerCallerKey.length,
+        exactCallers: writerReferences.filter((reference) => reference.operation === 'callpropvoid'),
       },
       seedTrait: {
         multinameIndex: seedMultinameIndex,
@@ -509,6 +668,7 @@ process.stdout.write(
         { classIndex: 253, className: '_-61q', field: '_-p38', type: 'Random', role: 'item spawning' },
         { classIndex: 382, className: '_-a1B', field: '_-p38', type: 'Random', role: 'rules and modes' },
       ],
+      randomMethodFingerprints,
       controlledRandomVectors: vectors,
     },
     null,
