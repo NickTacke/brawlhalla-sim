@@ -1,413 +1,365 @@
 # Interpreted reference oracle for Brawlhalla 10.09.96325
 
-Issue: [#5 Establish a non-live interpreted reference oracle](https://github.com/NickTacke/brawlhalla-sim/issues/5)
+Issue: [Establish a non-live interpreted reference oracle](https://github.com/NickTacke/brawlhalla-sim/issues/5)
 
-## Decision
+## Decision and present status
 
-Build one prototype around a hash-pinned, headless, full-SWF **Ruffle `core`** embedder at commit [`6e69eaf89a5b0258920f4f1f0e4b7ce25acd0943`](https://github.com/ruffle-rs/ruffle/tree/6e69eaf89a5b0258920f4f1f0e4b7ce25acd0943). Apply a small reviewed virtual-clock and seeded-RNG patch, instrument a copy of the target ABC at narrow method boundaries, and export canonical gameplay traces through Ruffle's `ExternalInterfaceProvider`.
+Prototype one hash-pinned, headless Ruffle `core` embedder at commit [`6e69eaf89a5b0258920f4f1f0e4b7ce25acd0943`](https://github.com/ruffle-rs/ruffle/tree/6e69eaf89a5b0258920f4f1f0e4b7ce25acd0943). Load the complete AIR application boundary, patch every reached state-influencing host service behind one deterministic interface, instrument a verified copy of the target ABC at narrow method and byte-PC boundaries, and emit authenticated canonical traces.
 
-This is a **conditional recommendation**, not a finding that an oracle already works. Stock Ruffle is not deterministic and has material AIR stubs. No target boot, match initialization, or interpreted trace has been demonstrated. Keep issue #5 open until the prototype acceptance contract passes.
+This is a conditional architecture recommendation. No target AIR boot, match initialization, or interpreted target trace has run. Stock Ruffle is nondeterministic and has material AIR stubs. [Establish a non-live interpreted reference oracle](https://github.com/NickTacke/brawlhalla-sim/issues/5) remains open.
 
-Do not build a new raw-ABC interpreter as the minimal oracle. The target is a full AIR SWF with startup, playerglobal, native, asset, event, and application-domain dependencies. A narrow evaluator over a pre-seeded object graph can remain a provenance aid, but it cannot establish match behavior.
+Live-client capture is excluded. The official Brawlhalla application must never be instrumented, modified, or used to produce game traces. An authorized Adobe or HARMAN AIR installation may run only tiny, non-game synthetic VM, AIR-native, and lifecycle microtests. Those goldens must contain no Brawlhalla bytecode, resources, state, or events.
 
-## Evidence grades and current trust
+A raw-ABC evaluator is not the minimal oracle. It omits SWF ordering, application descriptors, native extensions, packaged resources, AIR lifecycle, and application-domain behavior.
+
+## Evidence grades and trust levels
 
 | Grade | Meaning |
 | --- | --- |
-| P | Proven by a pinned source permalink, exact hash, or a repository command that fails closed. |
-| R | Reviewed measurement tied to the exact local ABC/SWF cohort, but not yet enforced by a committed oracle scanner. |
-| C | Candidate architecture or requirement awaiting a target experiment. |
+| P | Proven by a pinned source permalink, exact hash, or committed fail-closed command. |
+| R | Reviewed measurement tied to the exact local input cohort, not yet enforced by an oracle scanner. |
+| C | Candidate design or trace field awaiting target execution, reachability, or state-inventory evidence. |
 | U | Unknown. No correctness claim is allowed. |
 
-| Trust level | Required result | Present status |
+| Trust | Required result | Present status |
 | --- | --- | --- |
-| T0, identified | Inputs, runtime source, patches, transformations, toolchain, and harness are hash-pinned. | Partial. Local inputs and the upstream runtime commit are identified; no harness, patch, or transformed ABC exists. |
-| T1, booted | Full SWF reaches an offline match-ready boundary with every native call and resource read declared; prohibited capabilities fail closed. | Not reached. |
-| T2, deterministic | A replay initializes and completes twice in fresh processes with byte-identical canonical tick traces. | Not reached. |
-| T3, reviewed-corpus reference | VM, AIR, lifecycle, and game-layer differential gates pass, including all 12 reviewed fixtures on two architectures. | Not reached. This is the minimum level for calling traces trustworthy for the reviewed corpus. |
-| T4, declared-scope reference | Coverage and conformance pass for every declared replay-producing configuration, including negative and boundary cases. | Not reached. The local corpus is too narrow to claim this scope. |
+| T0, identified | Application, runtime source, patches, transformations, harness, toolchain, capability profile, and fixture identities are hash-pinned. | Partial. Local identities and upstream commits are known; no harness or transformed application exists. |
+| T1, booted | The complete declared AIR application reaches an offline match-ready boundary with every descriptor, extension, native call, resource read, and prohibited capability classified. | Not reached. |
+| T2, prototype feasibility | At least one authentic replay completes twice in fresh processes with byte-identical interpreted target traces in optimizer-on and optimizer-off modes, with all fail-closed gates active. | Not reached. T2 proves only that the prototype can execute deterministically. It is not trustworthy reference status and cannot resolve the issue. |
+| T3, reviewed-corpus interpreted reference | Layered conformance passes and actual interpreted target traces complete for all 12 reviewed fixtures on x64 and arm64, in optimizer-on and optimizer-off modes, with byte-identical repeatability and reviewer approval. | Not reached. This is the minimum issue-closure level and the minimum for calling a trace trustworthy for the reviewed corpus. |
+| T4, declared-scope interpreted reference | Coverage and conformance pass for every declared replay-producing configuration, including generated negative and boundary cases. | Not reached. The reviewed corpus is too narrow. |
 
-Agreement between two open-source runtimes does not raise a trace to T3 by itself. T3 needs independently obtained authorized Adobe/HARMAN AIR goldens for each reached AIR native and lifecycle behavior, plus official-build game-layer traces for selected local scenarios.
+Ticket closure requires an actual T3 interpreted target trace, not a plan, boot log, synthetic microtest, or T2 repeatability result. This correction pass produces none.
+
+## What layered T3 can and cannot prove
+
+T3 uses six independent or partially independent layers:
+
+1. reached AVM2 semantics checked against pinned Adobe avmplus acceptance behavior;
+2. authorized AIR synthetic native and lifecycle microgoldens, never game traces;
+3. static target reachability and capability closure from the original complete application;
+4. a pinned Lightspark differential over the same synthetic tests and instrumented target input where it can execute;
+5. deterministic interpreted target traces produced only by the patched Ruffle oracle;
+6. corpus self-consistency: replay-observable events, final results, cross-run equality, cross-architecture equality, optimizer equality, and declared invariants across all 12 fixtures.
+
+Passing these layers can establish that the pinned interpreted system is deterministic, internally consistent for the reviewed corpus, exercises a statically closed declared target slice, and agrees with independent VM, synthetic AIR, lifecycle, and open-source differential evidence at reached boundaries.
+
+It cannot prove equivalence to the official Brawlhalla runtime because no official game trace is permitted. It cannot prove behavior on unreached target paths, omitted application members, unsupported match configurations, or future builds. Agreement between Ruffle and Lightspark is corroboration, not an Adobe/HARMAN or Brawlhalla semantic proof. T3 therefore supports the scoped label `reviewed-corpus interpreted reference`, not `official behavior`. T4 still requires broader closure and coverage evidence.
 
 ## Pinned identities
 
-All digests are SHA-256. The local executable and data cohort is build `10.09.96325`.
+All digests are SHA-256. The executable and data cohort is build `10.09.96325`.
 
-| Artifact | Bytes | SHA-256 | Oracle role | Grade |
+| Artifact | Bytes | SHA-256 | Role | Grade |
 | --- | ---: | --- | --- | --- |
-| `BrawlhallaAir.swf` | 1,730,834 | `40df9af5308b9a17bf015feb38edec6d9bea57d1cd53078d298aa725acceb8b2` | Original full-SWF startup input | R |
+| `BrawlhallaAir.swf` | 1,730,834 | `40df9af5308b9a17bf015feb38edec6d9bea57d1cd53078d298aa725acceb8b2` | Entry SWF inside the AIR application | R |
 | tag-72 `main.abc` | 3,934,088 | `9fe9c83051343d5b0f667b44e87e6779854f7ee92b1014b279e033fc2bcfba2d` | Main executable rules | P |
-| `Dynamic.swz` | 292,091 | `cd54de039bc4e3441a7ae5811ef8748a719f49e0d4917016407d83b201ddf9c4` | Level and dynamic data candidate | R |
-| `Engine.swz` | 7,456 | `aa5b25d0351b7c2c41ccfc588f9bd7ece0c21adb4d4034aa2416d5101684f8dc` | Engine data candidate | R |
-| `Game.swz` | 977,263 | `4fc9d70c1c3642b7d3e61c8bb0062bb57c46ea2169276ca1d33616a5843d4aff` | Gameplay data candidate | R |
-| `Init.swz` | 182,708 | `bfb56c12517b7a95927feaca7180d5a85b6952d4d53e76e614ffc06bf4fe067b` | Unresolved initialization candidate, not approved for exclusion | R/U |
-| Replay manifest | 23,320 | `b044f9d1d76d51c61e0b21dae3074e02ac4248594ed84e79b65a59326db7d1ac` | Reviewed 12-fixture validation cohort | P |
-| 261-entry normalized aggregate | n/a | `4bcd0666a713d81266bd76885ed21740c4e8c4c01def2ebcd02202983a6a8d8f` | Snapshot provenance, not automatically the oracle allowlist | R |
-| Ruffle source | n/a | Git commit `6e69eaf89a5b0258920f4f1f0e4b7ce25acd0943` | Interpreter/player implementation | P |
+| `Dynamic.swz` | 292,091 | `cd54de039bc4e3441a7ae5811ef8748a719f49e0d4917016407d83b201ddf9c4` | Dynamic-data candidate | R |
+| `Engine.swz` | 7,456 | `aa5b25d0351b7c2c41ccfc588f9bd7ece0c21adb4d4034aa2416d5101684f8dc` | Engine-data candidate | R |
+| `Game.swz` | 977,263 | `4fc9d70c1c3642b7d3e61c8bb0062bb57c46ea2169276ca1d33616a5843d4aff` | Gameplay-data candidate | R |
+| `Init.swz` | 182,708 | `bfb56c12517b7a95927feaca7180d5a85b6952d4d53e76e614ffc06bf4fe067b` | Unresolved initialization candidate | R/U |
+| Replay manifest | 23,320 | `b044f9d1d76d51c61e0b21dae3074e02ac4248594ed84e79b65a59326db7d1ac` | Reviewed 12-fixture cohort | P |
+| 261-entry extraction-provenance aggregate | n/a | `4bcd0666a713d81266bd76885ed21740c4e8c4c01def2ebcd02202983a6a8d8f` | Extraction provenance only, never normalized data or an allowlist | R |
+| Ruffle source | n/a | Git commit `6e69eaf89a5b0258920f4f1f0e4b7ce25acd0943` | Primary interpreter/player | P |
+| Lightspark source | n/a | Git commit `d51ab60193b7baa56b2f6ec55f9a7789f99f6ee9` | Independent differential | P |
+| Adobe avmplus source | n/a | Git commit `65a05927767f3735db37823eebf7d743531f5d37` | VM-semantic reference | P |
 
-The SWF review reports that legacy tag 72 contains `main.abc` byte for byte, the symbol class for character ID 0 is `_-N4u`, and nine additional small ABC blocks cover ANE, Steam, sound, Epic, and AGAL integration. These are reviewed facts, not yet T0 gates. The prototype must generate and preserve a tag manifest with every DoABC block name, flags, byte range, and digest, plus the SymbolClass table. It must reject any mismatch before execution.
+The reviewed entry SWF contains 815 classes and 815 scripts. Its application initializer, method 14909, contains 29,796 instructions. The focused tick, input, and fighter slice contains 10,813 instructions across 73 opcodes. All 15,010 method bodies decode with valid byte-PC branch targets. The main ABC uses 110 opcodes overall, has 61 exception entries, and contains 13,328 kind-27 `MultinameL` instructions across 3,760 methods. These remain reviewed measurements until a committed fail-closed oracle scanner promotes them to P.
 
-Ruffle is dual licensed under MIT or Apache-2.0, as recorded in its pinned [`LICENSE.md`](https://github.com/ruffle-rs/ruffle/blob/6e69eaf89a5b0258920f4f1f0e4b7ce25acd0943/LICENSE.md#L1-L7). The prototype must record which option applies to distributed modifications and retain the required notices.
+Ruffle is dual licensed under MIT or Apache-2.0 in its pinned [`LICENSE.md`](https://github.com/ruffle-rs/ruffle/blob/6e69eaf89a5b0258920f4f1f0e4b7ce25acd0943/LICENSE.md#L1-L7). A distributed patched runtime must select an option and preserve required notices.
 
-### Local reproduction
+### Portable local identity commands
 
-User-owned proprietary inputs remain ignored. Supply them locally; do not add them to Git.
+Supply user-owned paths. These commands print relative product/module identifiers, sizes, and hashes. They do not claim to conceal a path printed by a failing shell or tool.
 
 ```bash
-# Identity checks
-shasum -a 256 artifacts/main.abc "$BRAWLHALLA_RESOURCES/BrawlhallaAir.swf" \
-  "$BRAWLHALLA_RESOURCES/Dynamic.swz" "$BRAWLHALLA_RESOURCES/Engine.swz" \
-  "$BRAWLHALLA_RESOURCES/Game.swz" "$BRAWLHALLA_RESOURCES/Init.swz"
-stat -f '%z %N' artifacts/main.abc "$BRAWLHALLA_RESOURCES"/{BrawlhallaAir.swf,Dynamic.swz,Engine.swz,Game.swz,Init.swz}
+export ABC_PATH=/absolute/user-supplied/path/main.abc
+export BRAWLHALLA_RESOURCES=/absolute/user-supplied/path/to/Resources
+export BRAWLHALLA_APP=/absolute/user-supplied/path/to/Brawlhalla.app
 
-# Exact reviewed replay-manifest identity
-shasum -a 256 artifacts/replay-corpus/10.09.96325/manifest.json
-stat -f '%z %N' artifacts/replay-corpus/10.09.96325/manifest.json
+sha256_file() {
+  if command -v shasum >/dev/null 2>&1; then
+    shasum -a 256 "$1" | awk '{print $1}'
+  else
+    sha256sum "$1" | awk '{print $1}'
+  fi
+}
+identity() {
+  label=$1
+  file=$2
+  printf '%s\t%s\t%s\n' "$label" "$(wc -c < "$file" | tr -d ' ')" "$(sha256_file "$file")"
+}
 
-# Decode all method bodies, validate byte-PC branch targets, and recover the proven replay-to-jump chain
+identity main.abc "$ABC_PATH"
+for name in BrawlhallaAir.swf Dynamic.swz Engine.swz Game.swz Init.swz; do
+  identity "$name" "$BRAWLHALLA_RESOURCES/$name"
+done
+identity application.xml "$BRAWLHALLA_APP/Contents/Resources/META-INF/AIR/application.xml"
+for module in SteamAir RawData SoundEngineExtension; do
+  base="$BRAWLHALLA_APP/Contents/Resources/META-INF/AIR/extensions/$module"
+  identity "$module/extension.xml" "$base/META-INF/ANE/extension.xml"
+  identity "$module/catalog.xml" "$base/catalog.xml"
+  identity "$module/library.swf" "$base/library.swf"
+done
+contents="$BRAWLHALLA_APP/Contents"
+identity AIR-launcher "$contents/MacOS/Brawlhalla"
+identity AIR-framework "$contents/Frameworks/Adobe AIR.framework/Versions/1.0/Adobe AIR"
+identity AIR-runtime-selector "$contents/Frameworks/Adobe AIR.framework/Versions/1.0/Adobe AIR_64"
+identity AIR-WebKit "$contents/Frameworks/Adobe AIR.framework/Versions/1.0/Resources/WebKit.dylib"
+identity AIR-A2712-helper "$contents/Frameworks/Adobe AIR.framework/Versions/1.0/Resources/A2712Enabler"
+extensions="$contents/Resources/META-INF/AIR/extensions"
+identity SteamAir-framework "$extensions/SteamAir/META-INF/ANE/MacOS-x86-64/SteamAir.framework/Versions/A/SteamAir"
+identity SteamAir-API "$extensions/SteamAir/META-INF/ANE/MacOS-x86-64/SteamAir.framework/Versions/A/libsteam_api.dylib"
+identity RawData-framework "$extensions/RawData/META-INF/ANE/MacOS-x86-64/RawData.framework/Versions/A/RawData"
+identity SoundEngineExtension-framework "$extensions/SoundEngineExtension/META-INF/ANE/MacOS-x86-64/SoundEngineExtension.framework/SoundEngineExtension"
+find "$BRAWLHALLA_APP/Contents/Resources" -maxdepth 1 -type f -name '*.swf' | wc -l
 bun install
-bun run provenance:movement
-```
-
-`bun run provenance:movement` accepts only ABC hash `9fe9...ba2d`, requires the unique build string `10.09.96325`, decodes 15,010 method bodies, validates branch targets as `instruction.end + s24`, and exits nonzero when the chain is unresolved. The implementation is `tools/avm2-provenance/movement_provenance.ts`; expected evidence is documented in `docs/provenance.md`.
-
-The current local checkout stores the user-supplied ABC at `artifacts/research/brawlhalla-physics/main.abc`, so this equivalent command was used during this review:
-
-```bash
 bun run --cwd tools/avm2-provenance build-dependency
 bun tools/avm2-provenance/movement_provenance.ts \
-  --abc artifacts/research/brawlhalla-physics/main.abc \
+  --abc "$ABC_PATH" \
   --target grounded-jump-y
 ```
 
-It returned build `10.09.96325`, the expected ABC hash, 15,010 decoded bodies, valid branch targets, `status: "proven"`, and no blockers. The path difference is local-only and must not enter a committed oracle manifest.
+The movement command accepts only the pinned ABC hash and build string, decodes 15,010 bodies, validates branch targets as `instruction.end + s24`, and exits nonzero when its declared chain is unresolved. Its implementation is `tools/avm2-provenance/movement_provenance.ts`.
 
-## Why a full SWF is the minimum load unit
+## Complete AIR application boundary
 
-Ruffle loads all classes and scripts from a DoABC and distinguishes lazy from eager blocks in [`core/src/avm2.rs`](https://github.com/ruffle-rs/ruffle/blob/6e69eaf89a5b0258920f4f1f0e4b7ce25acd0943/core/src/avm2.rs#L503-L547). It deliberately models SymbolClass and eager-initializer ordering in [`movie_clip.rs`](https://github.com/ruffle-rs/ruffle/blob/6e69eaf89a5b0258920f4f1f0e4b7ce25acd0943/core/src/display_object/movie_clip.rs#L4250-L4270). Raw `main.abc` execution omits those SWF tags, root-class construction, the nine auxiliary ABCs, player lifecycle, asset domains, and AIR startup.
+The full SWF is the minimum SWF bytecode load unit, not the complete AIR application. Ruffle loads each DoABC and models lazy/eager blocks in [`core/src/avm2.rs`](https://github.com/ruffle-rs/ruffle/blob/6e69eaf89a5b0258920f4f1f0e4b7ce25acd0943/core/src/avm2.rs#L503-L547), and it models SymbolClass ordering in [`movie_clip.rs`](https://github.com/ruffle-rs/ruffle/blob/6e69eaf89a5b0258920f4f1f0e4b7ce25acd0943/core/src/display_object/movie_clip.rs#L4250-L4270). The oracle must additionally bind the AIR descriptor, API version, extensions, native payload dispositions, launcher/runtime identity where relevant, and packaged resource closure.
 
-The reviewed ABC contains 815 classes and 815 scripts, not “about 100” startup scripts. Its application initializer, method 14909, is 29,796 instructions. The focused tick/input/fighter slice alone is 10,813 instructions across 73 opcodes. These reviewed measurements explain why startup cannot be replaced by blindly running scripts in ABC order or silently skipping unsupported instructions. A future committed capability scanner must promote these measurements from R to P before T0 acceptance.
+The reviewed installed macOS application has descriptor ID `BrawlhallaAir`, profile `extendedDesktop`, entry content `BrawlhallaAir.swf`, target namespace AIR 32, and three extension IDs: `SteamAir`, `RawData`, and `SoundEngineExtension`. Its bundled AIR runtime reports `33.1.1.633`. It contains 538 top-level SWFs. Their bulk names and bytes are not committed; membership remains unresolved pending static reachability and asset classification.
 
-Startup strategy:
+### Installed descriptor and extension identities
 
-1. Verify the full SWF and every embedded ABC identity before parsing or execution.
-2. Construct Ruffle through `PlayerBuilder` in AIR mode with the AVM2 optimizer disabled for the first conformance runs.
-3. Preserve native DoABC flags, SymbolClass binding, root construction, lazy script initialization, class initialization, and circular-initialization behavior. Do not manually iterate 815 script initializers.
-4. Mount only hash-pinned, read-only local resources. Begin with `Game.swz` and `Dynamic.swz`; include `Engine.swz` when observed dataflow requires it. `Init.swz` remains included or execution-halting until reachability proves it unnecessary.
-5. Record the first missing API, first stub invocation, first prohibited I/O, and first resource miss. Any one prevents T1.
-6. Boot through original application startup. Direct invocation of coordinator method 3273 is allowed only after a lifecycle differential proves that the resulting tick-zero state equals full startup.
-7. Keep the optimizer off until optimizer-on/off traces are identical. Then retain both modes as a regression dimension.
+| Member | Bytes | SHA-256 | Oracle disposition |
+| --- | ---: | --- | --- |
+| `META-INF/AIR/application.xml` | 1,215 | `33d64105102fb2999ae0d4d02c9ae75dd174d0f7965ae22f5f03390bdd8c2009` | **Include** in identity and parse before execution. AIR 32, profile, entry point, and extension IDs are mandatory gates. |
+| `SteamAir/extension.xml` | 398 | `103b76d4d50d642290dfd36c71612d904e832fc853b1ab02a96f269bf35cbe84` | **Include** for static interface and platform mapping only. It grants no native capability. |
+| `SteamAir/catalog.xml` | 1,574 | `995fbc2eef3745139d7846b51151e9afb47e7d50749001df9fdb8b3b0a154def` | **Include** in extension identity. |
+| `SteamAir/library.swf`, both packaged copies | 2,732 each | `fc0a5e4b3310481d9ab34e9dcdc632457042bff5dd7f0cef5413ccad964e7fb3` | **Include** bytecode and identity for linking. Native calls remain unresolved. |
+| `RawData/extension.xml` | 396 | `f4b7809e97341da31adfc194e2061f16631c774adf6618f4276f45a56d62824d` | **Include** for static interface and platform mapping only. |
+| `RawData/catalog.xml` | 995 | `86c20dae0d837d46d30ac17130b3292181a0fd34bcdcc7530323268a1909249f` | **Include** in extension identity. |
+| `RawData/library.swf`, both packaged copies | 841 each | `3e5a553a8f0d748e06d4457f9c6fd7374907c95644ca5be851bee2d46d3594df` | **Include** bytecode and identity for linking. Native calls remain unresolved and may affect resource decoding. |
+| `SoundEngineExtension/extension.xml` | 445 | `20957bab181d9b3a3a25cad2c717f68d7114d7692161f46d47d54321f637e302` | **Include** for static interface and platform mapping only. |
+| `SoundEngineExtension/catalog.xml` | 1,014 | `ad17e9ca11c4b57f8e0746f7366fd017cea71daa6e910a7d0efaed182db484ed` | **Include** in extension identity. |
+| `SoundEngineExtension/library.swf`, both packaged copies | 1,652 each | `696f34b1f987d903af71e0e1ee0faeba64a2e03a2328498a92ec49d5207ecef8` | **Include** bytecode and identity for linking. Native calls remain unresolved. |
 
-Ruffle exposes AIR classes through API-version mapping, but the pinned mapping stops at AIR 29 in [`api_version.rs`](https://github.com/ruffle-rs/ruffle/blob/6e69eaf89a5b0258920f4f1f0e4b7ce25acd0943/core/src/avm2/api_version.rs#L87-L101) and [`api_version.rs`](https://github.com/ruffle-rs/ruffle/blob/6e69eaf89a5b0258920f4f1f0e4b7ce25acd0943/core/src/avm2/api_version.rs#L244-L259). Target SWF version, AIR namespace/version markers, ANEs, imports, and reached native members must therefore be inventoried before T1.
+### Installed native identities and dispositions
 
-## Minimal architecture
+| Native member | Bytes | SHA-256 | Oracle disposition |
+| --- | ---: | --- | --- |
+| Product AIR launcher | 89,904 | `f36d503e2fec65986455911b20291677da8ca40bdf13079408e69ed3307481fb` | **Reject** for oracle execution. Ruffle is the executable. Hash only as installed-cohort evidence. |
+| Adobe AIR framework | 35,132,016 | `171caec02b70544b14d6fd81185d14f97a389d4db13b1fe96ed9a18a74a85980` | **Reject** for target-game execution. It may be separately identified only when an authorized installation runs tiny synthetic goldens. |
+| AIR runtime selector | 14 | `c277a6712f73f41c8419c8cbc3c9343e7e799c1528392a502558932e095181a3` | **Reject** for oracle execution. Hash as part of the bundled runtime identity only. |
+| AIR WebKit native library | 7,494,960 | `2af56c9b9d9f0bd3d93c87de46ed7193ffaf92b0e0a9f55c4b4bd74eca18efa2` | **Reject**. Web content and navigation are prohibited. |
+| AIR A2712 helper | 152,432 | `7c28fecc15c56ad7be5374e984deb4588ac42a19b85924d4e9d8bca498a3fa95` | **Reject**. No helper process capability. |
+| `SteamAir` framework | 254,912 | `6995632ca3b760a4911270bf0f78b24e4c07a897902bf82c2f598e9bbbd5a810` | **Reject** native execution. A reached member must use a reviewed deterministic stub only after static proof that platform state cannot affect match state; otherwise fail. Current status: **unresolved**. |
+| `SteamAir` API native library | 609,584 | `162b0c71e1e724582a884c95f2748cb20944a003e858c017dc6bdd10c18e1536` | **Reject** native execution and network/platform access. Same unresolved-call rule as `SteamAir`. |
+| `RawData` framework | 38,312 | `3a0ca18918c246c8f5958532dadd176a6128a9f18fbb3246f2098454e1a8c9ae` | **Reject** native execution. No stub is accepted until reached semantics and resource influence are closed. Current status: **unresolved**. |
+| `SoundEngineExtension` framework | 8,552,432 | `a2ac734c2aee32971008ac2fb7f314c599b9c78784b4dc06f59b40ea51c38bdf` | **Reject** native execution. A deterministic null stub is allowed only after static and dynamic proof that every reached return is state-irrelevant. Current status: **unresolved**. |
+
+Duplicate framework aliases with identical hashes are one payload identity, not independent evidence. Every other top-level packaged SWF is **unresolved**, not silently excluded. [Classify startup and visual asset membership](https://github.com/NickTacke/brawlhalla-sim/issues/38) must classify each asset family, and [Prove patch closure minimality and sufficiency](https://github.com/NickTacke/brawlhalla-sim/issues/39) must deletion-test the resulting closure. No proprietary member is committed.
+
+Ruffle maps AIR APIs only through AIR 29 at this commit in [`api_version.rs`](https://github.com/ruffle-rs/ruffle/blob/6e69eaf89a5b0258920f4f1f0e4b7ce25acd0943/core/src/avm2/api_version.rs#L87-L101) and [`api_version.rs`](https://github.com/ruffle-rs/ruffle/blob/6e69eaf89a5b0258920f4f1f0e4b7ce25acd0943/core/src/avm2/api_version.rs#L244-L259). The AIR 32 target is therefore an explicit compatibility blocker until every statically reachable API/member has a disposition and conformance result.
+
+## Minimal architecture and hash gates
 
 ```text
-hash gate
-  original full SWF + local resource allowlist + replay manifest
+complete application identity gate
+  descriptor + entry SWF/tag/ABC inventory + extension metadata/library SWFs
+  + resource closure + native dispositions + replay manifest
       |
       v
 patched Ruffle core at 6e69...0943
-  AIR mode, optimizer initially off
-  virtual monotonic clock + fixed AVM RNG seed
-  null renderer/audio/video/storage/UI
-  deny-all navigator and explicit read-only local-resource provider
+  AIR mode + OracleHostServices only + deny-by-default capabilities
+  optimizer-on and optimizer-off from the first target trace
       |
       v
-instrumented copy of full SWF
-  unchanged startup order
-  narrow entry/exit/event hooks in selected ABC methods
+independently verified instrumented application copy
+  authenticated method/byte-PC hooks + unchanged startup ordering
       |
       v
-ExternalInterfaceProvider: oracle.tick / oracle.event / oracle.fault only
+capability-authenticated ExternalInterface provider
       |
       v
-canonical binary trace encoder -> per-run digest + optional privacy-safe diagnostics
+candidate canonical binary encoder -> interpreted target trace + digest
 ```
 
-Ruffle is the smallest credible base because it combines full-SWF startup ordering with an embeddable player. `tick(dt)` and `run_frame()` are public and rendering is separate in [`player.rs`](https://github.com/ruffle-rs/ruffle/blob/6e69eaf89a5b0258920f4f1f0e4b7ce25acd0943/core/src/player.rs#L522-L580) and [`player.rs`](https://github.com/ruffle-rs/ruffle/blob/6e69eaf89a5b0258920f4f1f0e4b7ce25acd0943/core/src/player.rs#L2003-L2039). Its own headless test runner already supplies fixed ticks and an optional renderer in [`tests/framework/src/runner.rs`](https://github.com/ruffle-rs/ruffle/blob/6e69eaf89a5b0258920f4f1f0e4b7ce25acd0943/tests/framework/src/runner.rs#L79-L128). Host callbacks, a trace backend, and `ExternalInterfaceProvider` are public in [`external.rs`](https://github.com/ruffle-rs/ruffle/blob/6e69eaf89a5b0258920f4f1f0e4b7ce25acd0943/core/src/external.rs#L356-L419) and [`player.rs`](https://github.com/ruffle-rs/ruffle/blob/6e69eaf89a5b0258920f4f1f0e4b7ce25acd0943/core/src/player.rs#L2452-L2473).
+`oracleArtifactSetId` hashes the Ruffle commit and dependency lock, selected license, deterministic patch, runtime binary, toolchain and target triple, complete original application identity manifest, transformed SWF and ABC hashes, transformation manifest, independent-verifier identity/result, host-services contract, capability profile, sandbox policy, optimizer flag, and trace schema.
 
-### Hash-pinned oracle artifacts
+`simulatorPatchSnapshotId` separately hashes the simulator's installed patch snapshot. Neither ID is inferred from the other. Oracle runtime artifacts are not simulator inputs.
 
-A run is identified by an immutable `oracleArtifactSetId`, calculated from a canonical manifest containing:
+## One deterministic host-services boundary
 
-- Ruffle commit and recursive dependency lock;
-- selected Ruffle license and notices;
-- deterministic patch diff, patch SHA-256, and built Ruffle library SHA-256;
-- Rust toolchain, target triple, build flags, optimizer setting, and harness executable SHA-256;
-- original SWF SHA-256 and the complete original tag/ABC manifest;
-- instrumented SWF SHA-256 and each transformed ABC SHA-256;
-- a machine-readable transformation manifest with method ID, original byte-PC anchor, inserted instruction sequence, stack/scope deltas, branch/exception-table rewrites, and before/after method-body hashes;
-- virtual clock and RNG contract version, seed, native capability profile, local-resource allowlist, sandbox policy, and trace schema version.
+Stock Ruffle has more host influence than `getTimer` and RNG:
 
-These artifacts define **how the reference behavior was observed**. They are not simulator inputs.
+- `Player::tick` measures actual `run_frame` duration and uses it in `max_frames_per_tick`; it also accepts audio skew and then advances sockets, connections, timers, streams, and audio in [`player.rs`](https://github.com/ruffle-rs/ruffle/blob/6e69eaf89a5b0258920f4f1f0e4b7ce25acd0943/core/src/player.rs#L475-L588).
+- preload execution limits include elapsed-time budgets derived from frame rate in [`player.rs`](https://github.com/ruffle-rs/ruffle/blob/6e69eaf89a5b0258920f4f1f0e4b7ce25acd0943/core/src/player.rs#L2002-L2017).
+- update contexts carry `start_time`, `update_start`, and `max_execution_duration` in [`context.rs`](https://github.com/ruffle-rs/ruffle/blob/6e69eaf89a5b0258920f4f1f0e4b7ce25acd0943/core/src/context.rs#L181-L207), and AVM2 timeout checks compare host elapsed time in [`activation.rs`](https://github.com/ruffle-rs/ruffle/blob/6e69eaf89a5b0258920f4f1f0e4b7ce25acd0943/core/src/avm2/activation.rs#L945-L956).
+- `getTimer` reads `Instant::now()` in [`flash/utils.rs`](https://github.com/ruffle-rs/ruffle/blob/6e69eaf89a5b0258920f4f1f0e4b7ce25acd0943/core/src/avm2/globals/flash/utils.rs#L17-L27), and AVM RNG seeding reads current time in [`avm_rng.rs`](https://github.com/ruffle-rs/ruffle/blob/6e69eaf89a5b0258920f4f1f0e4b7ce25acd0943/core/src/avm_rng.rs#L48-L66).
+- no-argument `Date` reads current time and local date construction reads timezone in [`date.rs`](https://github.com/ruffle-rs/ruffle/blob/6e69eaf89a5b0258920f4f1f0e4b7ce25acd0943/core/src/avm2/globals/date.rs#L209-L258); the providers use `Utc::now()` and `Local::now()` outside deterministic test builds in [`locale.rs`](https://github.com/ruffle-rs/ruffle/blob/6e69eaf89a5b0258920f4f1f0e4b7ce25acd0943/core/src/locale.rs#L1-L25).
+- AVM timers advance from supplied `dt`, mutate during callback execution, and cap callbacks per update in [`timer.rs`](https://github.com/ruffle-rs/ruffle/blob/6e69eaf89a5b0258920f4f1f0e4b7ce25acd0943/core/src/timer.rs#L31-L75).
+- click sequencing timestamps input with `Utc::now()` in [`input.rs`](https://github.com/ruffle-rs/ruffle/blob/6e69eaf89a5b0258920f4f1f0e4b7ce25acd0943/core/src/input.rs#L283-L300).
+- text-selection blink state reads `Utc::now()` at creation, reset, and render checks in [`edit_text.rs`](https://github.com/ruffle-rs/ruffle/blob/6e69eaf89a5b0258920f4f1f0e4b7ce25acd0943/core/src/display_object/edit_text.rs#L3274-L3383).
+- navigator futures are scheduled through an executor whose completion order is a host concern in [`navigator.rs`](https://github.com/ruffle-rs/ruffle/blob/6e69eaf89a5b0258920f4f1f0e4b7ce25acd0943/core/src/backend/navigator.rs#L308-L389).
+- file-dialog metadata can expose creation time, modification time, filename, size, and contents in [`ui.rs`](https://github.com/ruffle-rs/ruffle/blob/6e69eaf89a5b0258920f4f1f0e4b7ce25acd0943/core/src/backend/ui.rs#L66-L80).
 
-### Simulator patch snapshot artifacts
+The patch must introduce exactly one `OracleHostServices` boundary. Every state-influencing host read or scheduling decision routes through it:
 
-The simulator's separately installed patch snapshot contains executable-rule provenance and normalized gameplay data identities: `main.abc`, required SWZ identities, normalized entry hashes, loader/default semantics, collision and hitbox data, and a closure manifest. It does not contain Ruffle, the deterministic Ruffle patch, instrumented ABCs, the oracle harness, or reference traces.
-
-A trace header names both IDs:
-
-```text
-oracleArtifactSetId = hash(runtime + patch + instrumentation + harness + sandbox + trace schema)
-simulatorPatchSnapshotId = hash(executable/data closure consumed by the simulator)
-```
-
-Never infer one ID from the other. The oracle can be rebuilt without changing the simulator snapshot, and the simulator snapshot can gain closure evidence without silently changing the oracle runtime.
-
-## Host and native boundary
-
-Ruffle's `NativeApplication`, `File`, and `FileStream` contain compatibility stubs at the pinned commit: [`NativeApplication.as`](https://github.com/ruffle-rs/ruffle/blob/6e69eaf89a5b0258920f4f1f0e4b7ce25acd0943/core/src/avm2/globals/flash/desktop/NativeApplication.as#L20-L88), [`File.as`](https://github.com/ruffle-rs/ruffle/blob/6e69eaf89a5b0258920f4f1f0e4b7ce25acd0943/core/src/avm2/globals/flash/filesystem/File.as#L13-L84), and [`FileStream.as`](https://github.com/ruffle-rs/ruffle/blob/6e69eaf89a5b0258920f4f1f0e4b7ce25acd0943/core/src/avm2/globals/flash/filesystem/FileStream.as#L6-L16). A game that boots through a default return is not evidence of fidelity.
-
-Every reached native call gets one capability-manifest entry:
-
-```text
-{ QName, member, call site method/byte-PC, disposition, implementation version,
-  input schema, output schema, side effects, conformance fixture, state-influence result }
-```
-
-| Boundary | Prototype disposition |
+| Service | Deterministic contract |
 | --- | --- |
-| AVM2 opcodes, multinames, closures, classes, exceptions | Use Ruffle implementation; validate reached semantics against avmplus. |
-| `ByteArray`, `Array`, `Vector`, `Point`, dictionaries/maps, XML, numeric coercion, `Math` | Use only after reached-member known-answer tests. Any mismatch is a blocker, not a tolerated approximation. |
-| `Date`, `getTimer`, timers | Route to one injected virtual monotonic clock. Reject wall-clock access. |
-| `Math.random` and AVM RNG initialization | Route to an explicit seeded state. Preserve algorithm, seed transform, stream split, and draw order in traces. |
-| Local files/resources | Read-only exact-path and hash allowlist. Reject directory enumeration and undeclared reads. |
-| `NativeApplication.exit` | Trap as `oracle.fault`; never exit silently. |
-| Steam, Epic, ANE keyboards, telemetry, networking | Explicit headless stubs only after proving their returns cannot influence match state. Otherwise block. |
-| Renderer, Stage3D, bitmap, bounds | Null backend is conditional. Any gameplay read of renderer-derived bounds or pixels blocks headless acceptance. |
-| Audio/video/UI/window/storage | Null, nonpersistent backends; any state-influencing return blocks. |
-| `ExternalInterface` | Permit only instrumentation-origin `oracle.tick`, `oracle.event`, and `oracle.fault`. Reject undeclared game-origin calls and host callbacks. |
-| HTTP, sockets, URL navigation | Deny and record. No fallback response. |
+| monotonic and wall time | Checked integer virtual time. Fixed epoch and timezone from the artifact manifest. No host clock after identity gating. |
+| frame pacing | Fixed requested quantum and declared frame/update cadence. Remove measured execution duration, `recent_run_frame_timings`, audio skew, sleep deadlines, and elapsed-time catch-up from semantic scheduling. |
+| execution limits | Deterministic operation-count budgets and explicit virtual-step limits. Host elapsed time may kill the sandbox but cannot change VM results or produce a valid trace. |
+| RNG | Manifest seed, exact algorithm/seed transform, stream identities, draw counts, and deterministic initialization. No host entropy. |
+| timers and blink | One virtual scheduler with a total order `(dueVirtualTime, creationSequence, callbackSequence)`. Text blink is virtualized if reached or removed only after reachability proves it cannot influence state. |
+| input time | Replay-derived virtual timestamps only. Host input is disabled. Any UI event is rejected. |
+| locale and timezone | Fixed manifest locale, language, timezone offset, date parsing policy, and Unicode data version. Host environment changes are invisible. |
+| resources and filesystem | Exact-path, read-only, hash-pinned allowlist. Results are sorted by canonical byte name. Directory enumeration, metadata, symlink escape, undeclared reads, and host creation order are rejected. |
+| asynchronous work and threads | Single deterministic executor with manifest queue order. Workers, parallel decode, renderer threads, background I/O, and nondeterministic callbacks are disabled or deterministically joined before observation. |
+| platform, renderer, audio, UI, storage, network | Deterministic explicit adapters. Any reached state-influencing return without a conformance fixture blocks the run. Network and navigation always reject. |
 
-The capability manifest starts empty. It is populated from static import inventory plus observed calls. Observed-only coverage is insufficient, so unreached imported natives remain unresolved until static reachability or explicit exclusion closes them.
+A static source audit must inventory all direct clock, entropy, locale, filesystem, metadata, process, thread, executor, audio-pacing, and backend calls in the pinned dependency closure. Dynamic capability accounting must prove every reached host call entered `OracleHostServices`. The oracle build fails if a forbidden symbol remains outside approved sandbox-only termination code. At runtime, an unregistered service ID, undeclared resource, host callback, thread creation, or direct provider bypass emits a stable fault and invalidates the trace. Repeatability tests perturb wall time, timezone, locale, CPU load, filesystem creation order, process scheduling, and architecture.
 
-## Deterministic driving contract
+The authoritative game update hook and all trace fields below remain candidates until [Recover authoritative tick phases and timestamp semantics](https://github.com/NickTacke/brawlhalla-sim/issues/7) and [Derive the complete gameplay-relevant state inventory](https://github.com/NickTacke/brawlhalla-sim/issues/9) close them.
 
-Ruffle currently derives `getTimer()` and initial RNG state from wall time in [`flash/utils.rs`](https://github.com/ruffle-rs/ruffle/blob/6e69eaf89a5b0258920f4f1f0e4b7ce25acd0943/core/src/avm2/globals/flash/utils.rs#L17-L27) and [`avm_rng.rs`](https://github.com/ruffle-rs/ruffle/blob/6e69eaf89a5b0258920f4f1f0e4b7ce25acd0943/core/src/avm_rng.rs#L43-L63). Stock Ruffle runs cannot satisfy this contract.
+## AIR and native capability boundary
 
-1. The harness owns integer virtual time. Before startup it sets `t = 0` and all declared RNG states to manifest values.
-2. It never reads host time, host randomness, locale, timezone, filesystem order, or network state after the hash gate.
-3. Replay timestamps are sampled in exact 16 ms quanta. For input step `n`, the requested time is `t(n) = 16 * n` ms with checked integer arithmetic.
-4. The harness injects all snapshots due at `t(n)` at the proven replay-input seam, then advances Ruffle by exactly 16 virtual ms. The ordering of timers, input insertion, frame events, and the authoritative update must be established by lifecycle goldens before T2.
-5. A Ruffle player frame is not assumed to equal a gameplay tick. Instrumentation brackets the authoritative game update. Emit state only after the outermost successful completion of coordinator method 3273 `_-u16._-A4X`.
-6. Zero, multiple, reentrant, or exceptional coordinator completions in one requested step are recorded and rejected unless an approved lifecycle fixture specifies that cadence.
-7. No rendering or audio call may advance time. Worker threads are disabled or deterministically joined. All callbacks are drained in a specified order before the next step.
-8. End only at the game's identified terminal match transition. Wall-clock timeout is a sandbox kill and failed trace, never a game result.
+Ruffle's `NativeApplication`, `File`, and `FileStream` include compatibility stubs at this commit: [`NativeApplication.as`](https://github.com/ruffle-rs/ruffle/blob/6e69eaf89a5b0258920f4f1f0e4b7ce25acd0943/core/src/avm2/globals/flash/desktop/NativeApplication.as#L20-L88), [`File.as`](https://github.com/ruffle-rs/ruffle/blob/6e69eaf89a5b0258920f4f1f0e4b7ce25acd0943/core/src/avm2/globals/flash/filesystem/File.as#L71-L102), and [`FileStream.as`](https://github.com/ruffle-rs/ruffle/blob/6e69eaf89a5b0258920f4f1f0e4b7ce25acd0943/core/src/avm2/globals/flash/filesystem/FileStream.as#L6-L16). `File.getDirectoryListing` is therefore not a deterministic order source today, but any replacement must sort canonically and route through `OracleHostServices`. A default return is not fidelity evidence.
 
-The exact local input chain is reproducible with `bun run provenance:movement`: replay timeline loader method 3507, insertion method 6133, timestamp sampler method 6135, input edge consumer method 6125, jump method 2954, and fighter movement method 2887. The report also proves timestamp field `_-D6c`, input mask `_-T4y`, grounded state `_-U5H`, pending vertical impulse `_-l16`, vertical velocity `_-30`, and motion delta `_-w2F.y` for ABC `9fe9...ba2d`.
+Every statically reachable or observed native member has one manifest record:
 
-### Replay injection seam
-
-- Parse the authentic format-268 replay outside the Ruffle process using the hash-pinned replay decoder.
-- Pass only validated state 3, state 4, and timestamped input snapshots across a length-delimited IPC boundary.
-- Reconstruct original loader semantics through method 3507 or prove a direct typed-state adapter equivalent at the first coordinator entry.
-- Insert snapshots through method 6133 and observe all eight reviewed `returnvalue` exits of method 6135. Trace method 6125 entry/exit to preserve edge consumption.
-- Treat replay seed construction, PRNG stream construction/splitting, loader defaults, state 3/state 4 interpretation, and resource selection as U until traced end to end.
-- Reject malformed ordering, duplicate timestamps outside proven semantics, arithmetic overflow, undeclared state fields, and replay/snapshot ID mismatches.
-
-The current 12-fixture manifest is narrow: format 268, four-human online timed free-for-all, 275,166 total replay bytes, 49,874 input snapshots, and 161 KO-face events. These values are in `artifacts/replay-corpus/10.09.96325/manifest.json`; reproduce its identity with the commands above. Passing those fixtures does not establish teams, stock, bots, offline, disconnects, ties, sudden death, special modes, or all powers and maps.
-
-## Selective trace seam and schema
-
-Instrument an ABC copy, never the original bytes. Preferred hooks for the pinned ABC are:
-
-| Boundary | Hook | Purpose | Status |
-| --- | --- | --- | --- |
-| AIR frame callback | `Main._-52Z`, method 5527, entry/exit | Lifecycle comparison | R |
-| Frame registration | `Main.Init`, method 5533, instructions 92-98 | Establish callback order | R |
-| Gameplay update | `_-u16._-A4X`, method 3273, outermost entry/exit | Authoritative per-tick emission | R |
-| Replay load | method 3507 | State 3/state 4 and timeline load | P for input chain, U for full initialization |
-| Snapshot insertion | method 6133 | Replay injection | P for input chain |
-| Timestamp sample | method 6135, every `returnvalue` | Selected mask/time | P for input chain |
-| Input edge consumer | method 6125 entry/exit | Changed-and-held edge behavior | P for input chain |
-| Fighter movement | `_-V4R._-D38`, method 2887 entry/exit | Motion state | P for jump chain |
-| Jump application | method 2954, branch markers 380/426/841/1011 | Dash, ground, wall, air jump events | R, with method identity P |
-| Hit append | `OnHit`, method 2944, after instruction 69 | Ordered hit event | R |
-| KO production | unresolved | Ordered KO/scoring event | U, blocks T3 |
-
-Instrumentation must be stack- and scope-neutral at each hook, preserve byte-PC branch targets and exception ranges, and call one host function with an ordered scalar vector. Do not walk the heap. A generic mutation mode may be used during method discovery, but only inside declared methods and only for `setproperty`, `initproperty`, `setslot`, and array/map writes. It must emit method ID, original byte PC, stable object ID, resolved namespace/name, and old/new exact value bits. Full-heap or bulk proprietary traces are prohibited.
-
-### Canonical trace boundaries
-
-Use a versioned binary schema, not JSON floating-point text.
-
-**Run header**
-
-- schema version;
-- `oracleArtifactSetId` and `simulatorPatchSnapshotId`;
-- original and instrumented SWF/ABC digests;
-- replay digest or privacy-safe fixture ID, never source filename;
-- replay format, declared scenario, seed inputs, virtual tick size;
-- runtime target triple, optimizer flag, and capability-profile digest.
-
-**Tick record, emitted after method 3273**
-
-- monotonic oracle tick index and virtual time;
-- consumed snapshot time `_-D6c` and mask `_-T4y`;
-- entities sorted by stable game entity ID, never host address or map iteration;
-- exact `Number` IEEE-754 bits and fixed-width `int`/`uint` values for position, velocity, motion delta, damage, stun/recovery, action/state IDs, grounded state `_-U5H`, pending impulse `_-l16`, vertical velocity `_-30`, and stocks/lives;
-- all PRNG stream states and draw counters;
-- mode, scoring, respawn, item, and match-terminal state proved gameplay-relevant;
-- ordered event list: input edges, jumps, hits, damage, item transitions, deaths/KOs, score changes, respawns, and terminal result;
-- per-record domain-separated digest chained to the prior record.
-
-**Fault/footer record**
-
-- terminal result and duration, or one stable fault code;
-- counts of requested 16 ms steps and completed authoritative updates;
-- first undeclared native/resource/capability access, if any;
-- final trace digest and event-count summary.
-
-The privacy filter must reject player names, account IDs, raw replay records, raw source entries, arbitrary strings, memory addresses, and proprietary bulk data before serialization. Safe committed outputs are schemas, hashes, counts, method/config identifiers, formulas, tiny synthetic fixtures, and privacy-filtered digests.
-
-## Sandboxing
-
-Embedder backends are capability controls, not an operating-system sandbox. Run each replay in a fresh, unprivileged process with:
-
-- no network namespace or equivalent deny-all network policy;
-- read-only runtime and exact local-resource allowlist;
-- empty read-only home where possible and a private size-limited temporary directory;
-- no inherited credentials, environment secrets, clipboard, devices, or user services;
-- CPU, memory, output, file-size, process-count, and virtual-tick limits;
-- syscall restrictions allowing only the harness's measured minimum;
-- closed standard input and length-limited IPC/output;
-- parent-side kill on policy violation, crash, hang, or output overflow.
-
-The navigator rejects every HTTP, socket, and navigation request. The resource provider rejects path traversal, symlinks escaping the allowlist, directory enumeration, hash mismatches, and case-folding ambiguity. A sandbox kill produces no valid trace.
-
-## Candidate disposition
-
-| Candidate | Disposition | Evidence and reason |
-| --- | --- | --- |
-| Patched Ruffle `6e69...0943` full-SWF `core` | **Primary, gated** | Exact SWF startup ordering, AVM2 implementation, embedding, fixed-tick precedent, and host callback seam. Requires clock/RNG patch, AIR import/boot proof, capability manifest, and game conformance. |
-| Stock Ruffle | **Reject as oracle** | Wall-time `getTimer`/RNG and AIR filesystem/application stubs make it nondeterministic and potentially silently wrong. It is only the upstream base. |
-| New raw-ABC custom interpreter | **Reject as minimal architecture** | Omits SymbolClass/lifecycle/AIR startup and requires a real AVM2 object model, initialization, exceptions, runtime multinames, natives, and asset loading. Several thousand runtime lines plus adapters/tests are more credible than 400-800 lines. A pre-seeded method evaluator remains a provenance tool only. |
-| Lightspark `d51ab60193b7baa56b2f6ec55f9a7789f99f6ee9` | **Secondary differential** | Its single-threaded fake-time harness and fixed tick are strong in [`runner.cpp`](https://github.com/lightspark/lightspark/blob/d51ab60193b7baa56b2f6ec55f9a7789f99f6ee9/tests/test-runner/src/framework/runner.cpp#L43-L145) and [`timer.cpp`](https://github.com/lightspark/lightspark/blob/d51ab60193b7baa56b2f6ec55f9a7789f99f6ee9/tests/test-runner/src/framework/backends/timer.cpp#L28-L46). DoABC/SymbolClass startup is heuristic in [`tags.cpp`](https://github.com/lightspark/lightspark/blob/d51ab60193b7baa56b2f6ec55f9a7789f99f6ee9/src/parsing/tags.cpp#L3539-L3554), `NativeProcess.start` is a no-op in [`flashdesktop.cpp`](https://github.com/lightspark/lightspark/blob/d51ab60193b7baa56b2f6ec55f9a7789f99f6ee9/src/scripting/flash/desktop/flashdesktop.cpp#L88-L112), and its README reports broad compatibility gaps in [`README.md`](https://github.com/lightspark/lightspark/blob/d51ab60193b7baa56b2f6ec55f9a7789f99f6ee9/README.md#L115-L121). LGPL-3.0 license: [`COPYING.LESSER`](https://github.com/lightspark/lightspark/blob/d51ab60193b7baa56b2f6ec55f9a7789f99f6ee9/COPYING.LESSER#L1-L12). |
-| Adobe avmplus `65a05927767f3735db37823eebf7d743531f5d37` | **VM-semantic verifier only** | Adobe's final/lazy script initialization is authoritative in [`AvmCore.cpp`](https://github.com/adobe-flash/avmplus/blob/65a05927767f3735db37823eebf7d743531f5d37/core/AvmCore.cpp#L821-L889) and [`MethodEnv.cpp`](https://github.com/adobe-flash/avmplus/blob/65a05927767f3735db37823eebf7d743531f5d37/core/MethodEnv.cpp#L551-L595), but its SWF support only extracts DoABC and supplies no display list, AIR, input, or game scheduler: [`ShellCore.cpp`](https://github.com/adobe-flash/avmplus/blob/65a05927767f3735db37823eebf7d743531f5d37/shell/ShellCore.cpp#L472-L555), [`swf.cpp`](https://github.com/adobe-flash/avmplus/blob/65a05927767f3735db37823eebf7d743531f5d37/shell/swf.cpp#L90-L151). MPL-2.0 license: [`LICENSE`](https://github.com/adobe-flash/avmplus/blob/65a05927767f3735db37823eebf7d743531f5d37/LICENSE#L1-L15). |
-| Authorized Adobe/HARMAN AIR runtime | **Golden producer only** | It is the needed AIR/lifecycle authority, but not a redistributable, source-pinned, auditable deterministic harness. Use an authorized isolated installation to produce narrow conformance goldens, not as the deliverable oracle. Record exact installer/runtime identity and licensing authorization. |
-| RedTamarin `766e945a7a2842865218fb1e2fd179c732167a25` | **Reject** | It identifies itself as an AS3 command-line runtime, not AIR in [`README.md`](https://github.com/Corsaair/redtamarin/blob/766e945a7a2842865218fb1e2fd179c732167a25/README.md#L4-L17). `Sprite` is empty in [`Sprite.as`](https://github.com/Corsaair/redtamarin/blob/766e945a7a2842865218fb1e2fd179c732167a25/src/as3/flash/display/Sprite.as#L8-L37), `setTimeout` throws in [`setTimeout.as`](https://github.com/Corsaair/redtamarin/blob/766e945a7a2842865218fb1e2fd179c732167a25/src/as3/flash/utils/setTimeout.as#L67-L72), and its event loop sleeps on wall time in [`CoreEventLoop.as`](https://github.com/Corsaair/redtamarin/blob/766e945a7a2842865218fb1e2fd179c732167a25/src/as3/shell/async/CoreEventLoop.as#L65-L88). MPL-1.1 top-level license: [`license.txt`](https://github.com/Corsaair/redtamarin/blob/766e945a7a2842865218fb1e2fd179c732167a25/license.txt#L1-L19). |
-| Shumway `16451d8836fa85f4b16eeda8b4bda2fa9e2b22b0` | **Reject** | Its deterministic shell is useful historically, but its own fail configuration records namespace, prototype, Proxy, and dynamic-property failures in [`failconfig.txt`](https://github.com/mozilla/shumway/blob/16451d8836fa85f4b16eeda8b4bda2fa9e2b22b0/utils/patches/tamarin-acceptance/failconfig.txt#L32-L70), it has no meaningful AIR playerglobal, and development stopped in 2016. |
-| AwayFL AVM2 `09afb8dd4f8df76a2795a83ee079bafa83ff8981`, playerglobal `6c4a1a03099308b4fb70acf04ba6efbffe70e5c0` | **Reject** | AIR classes and filesystem bindings are largely absent in [`link.ts`](https://github.com/awayfl/playerglobal/blob/6c4a1a03099308b4fb70acf04ba6efbffe70e5c0/lib/link.ts#L255-L276) and [`link.ts`](https://github.com/awayfl/playerglobal/blob/6c4a1a03099308b4fb70acf04ba6efbffe70e5c0/lib/link.ts#L396-L401); frame ordering has an authoritative-order TODO in [`Stage.ts`](https://github.com/awayfl/playerglobal/blob/6c4a1a03099308b4fb70acf04ba6efbffe70e5c0/lib/display/Stage.ts#L263-L301); `getTimer` uses `Date.now()` in [`FlashUtilScript_getTimer.ts`](https://github.com/awayfl/avm2/blob/09afb8dd4f8df76a2795a83ee079bafa83ff8981/lib/nat/FlashUtilScript_getTimer.ts#L4-L7). |
-
-## Why the existing evaluator is not an oracle
-
-The ignored research evaluator at `artifacts/research/brawlhalla-physics/brawlhalla-swz/abc_eval.ts` is 271 lines and is useful negative evidence:
-
-- line 7 hardcodes a deleted temporary path;
-- lines 25 and 34 index 1-based AVM2 pool entries as `strs[n]` instead of `strs[n - 1]`;
-- lines 232-240 apply byte-relative branch offsets to an instruction-array index;
-- line 247 silently no-ops unsupported instructions;
-- it does not implement correct receiver binding, closures, activations, `newclass`, constructors, slots, accessors, exceptions, namespaces, array semantics, coercion, or initialization.
-
-Reproduce the source review without executing proprietary code:
-
-```bash
-nl -ba artifacts/research/brawlhalla-physics/brawlhalla-swz/abc_eval.ts | sed -n '1,280p'
-grep -n 'strs\[nm\]\|pc +=\|unknown: no-op\|default:' \
-  artifacts/research/brawlhalla-physics/brawlhalla-swz/abc_eval.ts
+```text
+{ QName, member, callSiteMethod, originalBytePc, disposition,
+  implementationVersion, inputSchema, outputSchema, sideEffects,
+  conformanceFixture, stateInfluence, hostServiceId }
 ```
 
-Correct 1-based multiname handling and byte-PC branch resolution are implemented in `tools/avm2-provenance/movement_provenance.ts` (`strings[name - 1]` and `instruction.end + offset`) and exercised by `bun run provenance:movement`. The corrected evidence shows method 1885 performs rounding through `Math.pow` and `Math.round`; `Roland` is a `Knight -> Roland` legend alias; and the real `_-g5e` is a normal QName used on `SpawnBot`. Earlier interpolation conclusions must not be used.
+Allowed dispositions are `include`, `deterministic-stub`, `reject`, and `unresolved`. `unresolved` always blocks T1. Observed-only coverage is insufficient. Static reachability must account for runtime multinames, virtual dispatch, callbacks, exceptions, reflection, extension contexts, and application-domain loading.
 
-The reviewed main ABC uses 110 opcodes overall; the evaluator covers 69 and misses 41. Kind 27 is `MultinameL`, not RTQName, and its reviewed use count is 13,328 instructions in 3,760 methods. Runtime-name property semantics are foundational. Even a target-specific clean-room evaluator would need fail-closed stack/locals, byte-PC control flow, scope and activation objects, exceptions, closures, classes/constructors/slots/prototypes, namespaces/runtime multinames, exact numeric/coercion behavior, collections, ByteArray/XML, lazy initialization, and every reached native. Silently continuing is never allowed.
+## Authenticated instrumentation and trace channel
 
-Planning estimate, excluding Ruffle's existing code:
+Instrument a copy, never original bytes. The original and transformed application identities remain distinct.
 
-| Phase | Expected effort | Main uncertainty |
+A callback name alone is not authorization. The provider accepts a trace record only when all of these pass:
+
+1. a fail-closed static scan of every original ABC proves there is no reserved oracle callback name, reserved capability-token material, or original call path capable of issuing a reserved call;
+2. each run uses a manifest-bound capability token generated outside target state and injected only into verified instrumentation;
+3. the callback supplies the token, hook ID, original method ID, original byte PC, call-depth marker, and ordered scalar payload;
+4. the provider checks that tuple against the signed transformation manifest and the currently active verified instrumented method/PC call-stack boundary;
+5. the token is never returned to ActionScript, logged, serialized into the trace, or available through a game callback;
+6. any original `ExternalInterface` call, host-to-game callback, bad token, wrong call stack, duplicated sequence, or undeclared hook invalidates the run.
+
+The transformation manifest records original and transformed body hashes, original byte-PC anchor, inserted instructions, stack and scope deltas, local changes, branch rewrites, exception-range rewrites, and hook sequence constraints. An independent transformer/verifier must confirm stack/scope neutrality, valid branches, exception coverage, and reserved-call absence.
+
+Candidate hooks are reviewed method IDs 5527 (AIR frame callback), 5533 (registration), 3273 (gameplay coordinator), 3507 (replay load), 6133 (snapshot insertion), 6135 (timestamp sample), 6125 (input edges), 2887 (fighter movement), 2954 (jump), and 2944 (hit append). KO, scoring, respawn, terminal state, stable entity identity, and complete state fields are unresolved. These IDs identify investigation anchors, not attested trace semantics.
+
+## Optimizer and independent verification
+
+Optimizer-on and optimizer-off coverage is mandatory from the first executable target trace. Ruffle invokes `method.verify` when an activation is created in [`activation.rs`](https://github.com/ruffle-rs/ruffle/blob/6e69eaf89a5b0258920f4f1f0e4b7ce25acd0943/core/src/avm2/activation.rs#L352-L367), but its verifier always calls the optimizer pipeline in [`verify.rs`](https://github.com/ruffle-rs/ruffle/blob/6e69eaf89a5b0258920f4f1f0e4b7ce25acd0943/core/src/avm2/verify.rs#L500-L524). The optimizer itself says it runs regardless of the disable option in [`optimizer.rs`](https://github.com/ruffle-rs/ruffle/blob/6e69eaf89a5b0258920f4f1f0e4b7ce25acd0943/core/src/avm2/optimizer.rs#L16-L27). Therefore, “optimizer off” does not provide an independent unoptimized-bytecode verification path.
+
+Before either mode executes, an independently implemented, hash-pinned ABC verifier must validate every original and transformed body, operand, stack/scope bound, local, branch target, lookup switch, exception range/target, multiname reference, method reference, and hook rewrite. Ruffle verification must also pass in both modes. T2 and later require byte-identical trace bytes between modes. A mode-specific verification failure or trace difference is a blocker, not an approved optimizer exception.
+
+## Candidate driving and trace contract
+
+The harness starts virtual time at zero, injects validated replay state through the proven input chain, and requests checked 16 ms quanta. The 16 ms value, injection order, coordinator method 3273, and post-update emission point are candidates until scheduler evidence closes. Zero, multiple, reentrant, or exceptional coordinator completions fail unless a reviewed synthetic lifecycle fixture and target reachability justify them.
+
+The trace schema is entirely candidate until the state-inventory and hook work closes. It must eventually include:
+
+- a header with schema, both artifact IDs, original/transformed application digests, privacy-safe fixture ID, replay format/scenario, seed contract, virtual quantum, target triple, optimizer mode, verifier result, and capability-profile digest;
+- per-update exact IEEE-754 bits and fixed-width integers for every gameplay-relevant field, entities ordered by stable game identity, all PRNG states/draw counts, and ordered input/action/hit/KO/score/respawn/terminal events;
+- a domain-separated digest chain;
+- a footer with terminal result or stable fault, requested/completed update counts, first capability fault, final digest, and event counts.
+
+The privacy filter rejects player names, account IDs, raw replay records, source filenames, arbitrary target strings, memory addresses, and bulk proprietary data. Safe committed evidence is limited to schemas, hashes, counts, method/config identifiers, formulas, tiny synthetic fixtures, and privacy-filtered digests.
+
+## Layered validation ladder
+
+1. **Identity:** reject any mismatch in application, extension, resource, runtime, patch, toolchain, transformer, verifier, instrumentation, harness, replay manifest, capability profile, or schema.
+2. **Structural verification:** independently verify every original and transformed ABC before Ruffle; then require Ruffle verification in both optimizer modes.
+3. **Reached VM semantics:** select avmplus tests for every reached opcode and semantic operation. Compare exact values, exceptions, namespaces, closures, prototypes, slots, enumeration, coercion, `NaN`, and negative zero.
+4. **Synthetic AIR natives:** run one tiny non-game fixture per reached AIR member in authorized Adobe/HARMAN AIR, patched Ruffle, and Lightspark where supported. Compare exact results, exceptions, events, and side-effect order.
+5. **Synthetic lifecycle:** compare tiny non-game DoABC lazy/eager, SymbolClass, root construction, constructor/class/script initialization, frame-event, input, and timer microtests. No target code is used in the authorized runtime.
+6. **Static target closure:** prove original-application reachability from descriptor entry through replay initialization and update roots, including dynamic dispatch, reflection, exceptions, extensions, resources, and callbacks.
+7. **Independent differential:** run the same synthetic fixtures and instrumented target application in pinned Lightspark where possible. Every difference is explained or blocks the reached scope. Agreement is corroborative only.
+8. **Deterministic target execution:** produce interpreted traces only in patched Ruffle. Require optimizer equality, 100 fresh-process repeats, x64/arm64 equality, and equality under perturbed host inputs.
+9. **Corpus self-consistency:** all 12 pinned fixtures initialize and finish, agree with replay-observable events and final results, satisfy declared invariants, and perform no undeclared access.
+10. **Privacy and review:** automated privacy rejection passes and an independent reviewer approves the exact scope and unexplained-difference ledger.
+
+This ladder contains no official-build game instrumentation or game trace comparison.
+
+## Candidate and tool dispositions
+
+| Candidate | Disposition |
+| --- | --- |
+| Patched Ruffle `6e69...0943` complete-application `core` embedder | **Primary, gated.** Best available startup and embedder base. Requires complete AIR boundary, deterministic host services, independent verification, and layered T3. |
+| Stock Ruffle | **Reject as oracle.** Host-time pacing, clock/RNG/input/text sources, AIR stubs, and unresolved AIR 32 behavior violate the contract. |
+| Lightspark `d51ab...ee9` | **Independent differential only.** Its fake-time runner is useful in [`runner.cpp`](https://github.com/lightspark/lightspark/blob/d51ab60193b7baa56b2f6ec55f9a7789f99f6ee9/tests/test-runner/src/framework/runner.cpp#L43-L145), but startup and AIR gaps prevent oracle authority. |
+| Adobe avmplus `65a0...d37` | **Reached VM semantics only.** It provides initialization semantics in [`AvmCore.cpp`](https://github.com/adobe-flash/avmplus/blob/65a05927767f3735db37823eebf7d743531f5d37/core/AvmCore.cpp#L821-L889) and [`MethodEnv.cpp`](https://github.com/adobe-flash/avmplus/blob/65a05927767f3735db37823eebf7d743531f5d37/core/MethodEnv.cpp#L551-L595), but not the AIR application or game scheduler. |
+| Authorized Adobe/HARMAN AIR | **Tiny synthetic golden producer only.** Never load, instrument, or trace the Brawlhalla application. Record runtime identity and authorization for every synthetic golden. |
+| New raw-ABC interpreter | **Reject as minimal architecture.** It omits the application boundary and would duplicate a full VM and native layer. |
+| Existing 271-line research evaluator | **Provenance aid only.** It has incorrect pool indexing and branch units, silently skips unsupported operations, and lacks core AVM2 semantics. |
+
+## Non-attested planning ranges
+
+These are non-attested planning ranges, not measurements, commitments, or feasibility evidence:
+
+| Phase | Planning range | Main uncertainty |
 | --- | ---: | --- |
-| SWF/import/resource inventory and offline boot spike | 3-8 engineer-days | First missing AIR/native and ANE reachability |
-| Virtual clock/RNG patch plus headless harness | 5-10 engineer-days | Timer/event order and hidden host entropy |
-| ABC transformation, manifest, and canonical trace encoder | 5-12 engineer-days | Safe exception/branch rewrites and KO hook |
-| Native/resource adapters and match initialization | 5-30+ engineer-days | Loader defaults, PRNG, collision/hitbox assets, stub promotion |
-| VM/AIR/lifecycle/game differential suite | 10-25+ engineer-days | Authorized official goldens and cross-architecture differences |
+| complete AIR inventory and offline boot spike | 4-10 engineer-days | AIR 32 and extension/native reachability |
+| deterministic host-services patch and harness | 8-18 engineer-days | complete host-source closure and lifecycle ordering |
+| authenticated transformation, verifier, and candidate trace encoder | 8-18 engineer-days | safe rewrites and complete hook discovery |
+| application adapters and match initialization | 10-40+ engineer-days | loaders, assets, natives, PRNG, and executable closure |
+| layered conformance and reviewed-corpus T3 | 15-35+ engineer-days | independent differentials and cross-platform differences |
 
-A T2 spike is plausibly 4-8 engineer-weeks if the game boots without new behavioral natives. T3 is plausibly 6-12+ engineer-weeks and can expand materially. These are planning ranges, not feasibility evidence. A startup-capable custom interpreter would require several thousand runtime lines plus native adapters, fixtures, tracing, and differential tests; its reachability-dependent total is not currently estimable. A 400-800 line implementation is credible only for a narrow evaluator over an attested prebuilt object graph.
+A T2 spike is a non-attested planning range of 6-12 engineer-weeks. T3 is a non-attested planning range of 10-20+ engineer-weeks and may expand materially. Neither range claims that the target boots or that the architecture will reach T3.
 
-## Differential validation ladder
+## Existing Wayfinder ownership
 
-1. **Identity:** reject altered source, patch, instrumented bytes, runtime binary, replay manifest, capability profile, or resources.
-2. **Decoder/control flow:** decode all 15,010 bodies with zero invalid branch targets. Validate every transformed branch target and exception range again.
-3. **VM layer:** select every avmplus acceptance test touching reached opcodes/classes. Compare exact output, coercion, exception type/message boundary, namespace lookup, closure, prototype, slot, enumeration, `NaN`, and negative zero behavior.
-4. **AIR native layer:** make one tiny synthetic AIR fixture per imported/reached native member. Obtain authorized official-runtime goldens. Require exact return, exception, event, and side-effect ordering.
-5. **Lifecycle layer:** golden-test DoABC lazy/eager flags, SymbolClass root `_-N4u`, Haxe `Boot.start`, constructor/cinit/script order, `ENTER_FRAME`, timers, and coordinator completion.
-6. **Game layer:** instrument the official build and the Ruffle copy at equivalent narrow seams for deterministic local scenarios. Compare exact ordered scalar vectors, not screenshots, heap dumps, or tolerance-based summaries.
-7. **Independent implementation:** run identical instrumented SWF/microtests in Lightspark. Differences block; agreement raises confidence but is not proof.
-8. **Repeatability:** require byte-identical traces across 100 fresh processes, at least two architectures, optimizer off/on, and perturbed timezone, locale, host map insertion order, and resource-directory creation order.
-9. **Corpus:** all 12 hash-pinned fixtures initialize, complete, and reproduce exact ordered KO IDs/timestamps, scores, duration, state vectors, and final digest without undeclared reads.
-10. **Privacy:** automated rejection confirms no names, account IDs, source filenames, raw records, arbitrary strings, or bulk proprietary data enter trace artifacts.
+Do not create duplicate oracle tickets for simulator-domain questions. Reuse these linked tickets:
 
-Rendering may remain disabled only after a static and dynamic check proves no reached gameplay path reads renderer bounds, text metrics, bitmap pixels, Stage3D results, or other visual outputs. Repeat the check with a deterministic software renderer; any trace difference promotes rendering into the behavioral native profile.
+- randomness: [Recover deterministic randomness and draw ordering](https://github.com/NickTacke/brawlhalla-sim/issues/6);
+- ticks and timestamp phases: [Recover authoritative tick phases and timestamp semantics](https://github.com/NickTacke/brawlhalla-sim/issues/7);
+- state inventory: [Derive the complete gameplay-relevant state inventory](https://github.com/NickTacke/brawlhalla-sim/issues/9);
+- conformance and closure gates: [Decide exact conformance and release gates](https://github.com/NickTacke/brawlhalla-sim/issues/14);
+- corpus coverage: [Decide the conformance corpus coverage model](https://github.com/NickTacke/brawlhalla-sim/issues/16);
+- divergence reporting: [Prototype a canonical per-tick divergence report](https://github.com/NickTacke/brawlhalla-sim/issues/17);
+- executable initialization and tick closure: [Prove match initialization and tick executable closure](https://github.com/NickTacke/brawlhalla-sim/issues/32);
+- geometry and collision: [Close level resolution and collision geometry](https://github.com/NickTacke/brawlhalla-sim/issues/33);
+- offensive hitboxes: [Locate offensive hitbox placement and timing](https://github.com/NickTacke/brawlhalla-sim/issues/34);
+- loader normalization/defaults: [Prove patch-data loader normalization and defaults](https://github.com/NickTacke/brawlhalla-sim/issues/35);
+- mode dependencies: [Map replay-producing modes to patch closure dependencies](https://github.com/NickTacke/brawlhalla-sim/issues/36);
+- VM and AIR semantics: [Specify AVM2 and AIR deterministic native semantics](https://github.com/NickTacke/brawlhalla-sim/issues/37);
+- startup and visual assets: [Classify startup and visual asset membership](https://github.com/NickTacke/brawlhalla-sim/issues/38);
+- final closure proof: [Prove patch closure minimality and sufficiency](https://github.com/NickTacke/brawlhalla-sim/issues/39).
 
-## Prototype acceptance contract
+## Genuinely oracle-specific residual work
 
-The prototype is accepted at T2 only when all items below are machine-enforced and independently reviewed:
+### Build the deterministic Ruffle host-services patch
 
-1. Exact input/runtime/patch/instrumentation/harness identities are emitted and hash-gated before execution.
-2. The original full SWF boots in AIR mode offline; tag, DoABC, SymbolClass, import, ANE, and resource manifests are complete.
-3. Every imported and reached native has an explicit capability disposition. Any undeclared call, default compatibility stub, or undeclared read fails the run.
-4. Virtual `Date`/`getTimer`, timers, and AVM RNG produce known-answer results. No host entropy is reachable.
-5. State 3, state 4, inputs, seed transform, PRNG streams, loader defaults, and match-ready state are traced end to end.
-6. Fixed 16 ms requests drive a lifecycle-proven authoritative update cadence. Method 3273 completion, not Ruffle frame count, defines trace emission.
-7. Instrumentation transformation is independently verified stack/scope neutral with valid branches and exceptions.
-8. The canonical schema emits exact numeric bits, stable entity ordering, complete declared PRNG state, ordered gameplay events, and stable fault records.
-9. One authentic replay initializes and finishes twice in fresh sandbox processes with identical full trace bytes and digest.
-10. Unknown opcode, unresolved multiname/dispatch, exception escape, undeclared native/resource, prohibited I/O, renderer dependency, callback-order ambiguity, zero/multiple update anomaly, crash, hang, and privacy violation all fail closed.
+- **Start:** pinned Ruffle host-source inventory and `OracleHostServices` contract above.
+- **Evidence:** reviewed patch and binary hashes, forbidden-symbol audit, service-call coverage, synthetic known-answer tests, operation-count timeout tests, and host-perturbation repeats.
+- **Acceptance:** no state-influencing direct host source remains; every bypass fails closed; results are identical across 100 fresh processes and x64/arm64.
 
-T2 does **not** make the output a trustworthy reference. T3 additionally requires the full differential-validation ladder through the reviewed corpus, reviewer approval, and a declared scope statement. Until then, label outputs `experimental interpreted trace`.
+### Boot the complete AIR application under deny-by-default capabilities
 
-## Ticket-ready residual questions
+- **Start:** descriptor, AIR 32 target, runtime identity, three extension identities, native dispositions, entry SWF hash, and 538-top-level-SWF count above.
+- **Evidence:** privacy-safe application manifest, static extension/native/resource reachability, stable boot log with method/byte-PC call sites, and zero unresolved capability at the match-ready boundary.
+- **Acceptance:** two fresh offline boots reach the same boundary with no stub-default return, undeclared resource, native execution, network access, or unresolved disposition.
 
-### 1. Inventory full-SWF startup and AIR native reachability
+### Implement authenticated instrumentation and independent transformed-ABC verification
 
-- Starting evidence: full-SWF hash `40df...b2d`; tag-72 ABC hash `9fe9...ba2d`; root SymbolClass `_-N4u`; nine auxiliary ABC blocks; Ruffle AIR mapping ends at AIR 29 and contains key stubs.
-- Required evidence: committed tag/ABC/SymbolClass/import/ANE manifest, target SWF and AIR API versions, offline boot log with stable method/byte-PC call sites, complete reached native/resource list.
-- Acceptance: two fresh boots reach the same match-ready boundary with zero undeclared native calls, stub returns, prohibited I/O, or resource misses.
+- **Start:** candidate hook IDs, reserved-call proof, capability-token protocol, and transformation-manifest requirements above.
+- **Evidence:** independently verified original/transformed ABCs, negative forgery fixtures, call-stack/PC enforcement, optimizer-on/off execution, privacy tests, and stable transformation hashes.
+- **Acceptance:** only declared instrumented method/PC boundaries can emit; all original or forged calls fail; both optimizer modes produce identical trace bytes.
 
-### 2. Make Ruffle time and randomness injectable
+### Produce and review the first T3 interpreted target trace
 
-- Starting evidence: pinned `getTimer` and AVM RNG read wall time.
-- Required evidence: minimal reviewed patch, patch and binary hashes, synthetic known-answer tests for `Date`, `getTimer`, timers, `Math.random`, seed initialization, and callback order.
-- Acceptance: exact results across 100 fresh processes and two architectures with host time/random APIs denied.
-
-### 3. Prove replay initialization and PRNG closure
-
-- Starting evidence: methods 3507, 6133, 6135, and 6125 form the reviewed input chain; replay manifest contains 12 unique seeds. Seed transformation, stream split, draw order, loader defaults, and mode roots remain unknown.
-- Required evidence: instruction-level trace from replay state 3/state 4 through tick-zero state and every PRNG stream; resource reads tied to exact hashes.
-- Acceptance: independently reproduce tick-zero state and first 100 update digests for at least two distinct seeds without undeclared data.
-
-### 4. Establish the authoritative scheduler boundary
-
-- Starting evidence: frame callback method 5527, registration method 5533, and coordinator method 3273 are candidate hooks; Ruffle separates `tick` and rendering.
-- Required evidence: official-runtime and Ruffle lifecycle microtraces for input insertion, timers, `ENTER_FRAME`, coordinator entry/exit, and post-update events.
-- Acceptance: one documented ordering and cadence matches exact goldens under fixed 16 ms requests, including zero/multiple/reentrant negative cases.
-
-### 5. Close behavioral native and resource dependencies
-
-- Starting evidence: direct target dependencies include `getTimer`, `ByteArray`, `Point`, `IMap`, and `IntMap`; `Game.swz` and `Dynamic.swz` are candidates; `Engine.swz` and `Init.swz` are unresolved; rendering reads are untested.
-- Required evidence: static reachability plus observed capability profile, official AIR microtests, exact read allowlist, and renderer-on/off comparison.
-- Acceptance: all reached calls/reads conform exactly; excluded resources and null backends are proven state-irrelevant.
-
-### 6. Define complete selective gameplay trace hooks
-
-- Starting evidence: methods 3273, 2887, 2954, 2944 and named fighter fields give narrow update/movement/hit seams. Exact KO production is unresolved.
-- Required evidence: KO/scoring/respawn/terminal hooks, stable entity identity, all gameplay-relevant state fields, PRNG counters, transformation manifest, privacy tests.
-- Acceptance: exact per-tick trace explains every ordered KO, score, stock/life, respawn, and final result in all 12 fixtures without heap walking.
-
-### 7. Build the VM, AIR, lifecycle, and game conformance matrix
-
-- Starting evidence: avmplus is the VM semantic authority; official AIR is needed for natives/lifecycle; Lightspark is an independent differential only.
-- Required evidence: reached-opcode acceptance selection, one official golden per native/member and lifecycle edge, equivalent narrow official-game traces, Lightspark comparison, architecture/optimizer matrix.
-- Acceptance: zero unexplained differences. Approved, documented exclusions must be statically and dynamically unreachable from the declared scope.
-
-### 8. Promote reviewed local measurements into fail-closed provenance
-
-- Starting evidence: reviewed counts include 815 scripts/classes, 110 used opcodes, 61 exception entries, method 14909 size, focus-slice size, and foundational kind-27 `MultinameL` use.
-- Required evidence: a small committed privacy-safe scanner pinned to `abc-disassembler#ad9714d` that emits these counts, import inventory, method-body hashes, and hook anchor uniqueness for ABC `9fe9...ba2d`.
-- Acceptance: command output is stable, contains no proprietary strings or local paths, and fails on identity or hook drift.
+- **Start:** T3 definition, layered ladder, complete capability profile, closed domain tickets above, and the pinned 12-fixture manifest.
+- **Evidence:** actual patched-Ruffle target traces, synthetic AIR/lifecycle goldens, avmplus and Lightspark result ledger, static target closure, 100-run and architecture/optimizer matrices, corpus invariants, and privacy report.
+- **Acceptance:** every T3 gate passes with zero unexplained difference and reviewer approval. Only then may [Establish a non-live interpreted reference oracle](https://github.com/NickTacke/brawlhalla-sim/issues/5) close.
 
 ## Fail-closed summary
 
-No trace is valid after any hash mismatch, undeclared or incompatible native, compatibility-stub return, unknown opcode, unresolved dispatch, unhandled exception, undeclared resource read, prohibited I/O, host clock/random access, lifecycle ambiguity, instrumentation mismatch, invalid branch/exception range, renderer-dependent state, scheduler anomaly, nondeterministic ordering, trace-schema violation, privacy violation, crash, hang, or sandbox kill.
+No trace is valid after a hash mismatch, incomplete application identity, unresolved descriptor/extension/native/resource member, independent-verifier failure, Ruffle verifier failure, optimizer divergence, unknown opcode, unresolved dispatch, unhandled exception, compatibility-stub default, undeclared host service, host-boundary bypass, prohibited I/O, native payload execution, wall-clock or entropy read, nondeterministic ordering, lifecycle ambiguity, instrumentation mismatch, reserved-call authentication failure, invalid branch/exception range, renderer-dependent state, scheduler anomaly, privacy violation, crash, hang, or sandbox kill.
 
-No open-source candidate currently proves conformance to Adobe/HARMAN AIR game semantics. The recommended Ruffle architecture minimizes new interpreter work and maximizes auditability, but target feasibility remains U until boot/import, initialization, deterministic driving, and trace-repeatability experiments pass.
+No open-source candidate proves official Adobe/HARMAN AIR game semantics, and this design deliberately obtains no official game traces. Target feasibility remains unknown until the complete application boots and T2 runs. Trustworthy reviewed-corpus status remains unearned until actual T3 interpreted target traces pass the layered contract.
