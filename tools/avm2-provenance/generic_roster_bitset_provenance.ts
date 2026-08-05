@@ -135,6 +135,18 @@ function displayParam(value: unknown, strings: string[]): unknown {
   if (name) return name
   return value
 }
+function methodParamTypeQName(methodId: number, parameterIndex: number): string {
+  const typeIndex = abc.method[methodId]?.param_type[parameterIndex]
+  assert(typeof typeIndex === 'number', `method ${methodId} lacks parameter ${parameterIndex + 1}`)
+  const key = qnameKey(abc.constant_pool.multiname[typeIndex - 1])
+  assert(key, `method ${methodId} parameter ${parameterIndex + 1} does not use an exact QName`)
+  return key
+}
+function classQName(classIndex: number): string {
+  const key = qnameKey(abc.constant_pool.multiname[abc.instance[classIndex].name - 1])
+  assert(key, `class ${classIndex} does not use an exact QName`)
+  return key
+}
 function requireAt(methodId: number, pc: number, opcode: string, name?: string): LocatedInstruction {
   const instruction = methods.get(methodId)?.find((candidate) => candidate.pc === pc)
   assert(instruction, `method ${methodId} lacks PC ${pc}`)
@@ -195,7 +207,29 @@ function exactReferencesForQName(key: string): Array<{
     }))
     .filter((entry) => entry.references.length > 0)
 }
+function exactQNameAt(methodId: number, pc: number): string {
+  const instruction = methods.get(methodId)?.find((candidate) => candidate.pc === pc)
+  assert(instruction, `method ${methodId} lacks PC ${pc}`)
+  const key = qnameKey(instruction.params[0])
+  assert(key, `method ${methodId} PC ${pc} does not use an exact QName`)
+  return key
+}
+function methodQName(methodId: number): string {
+  const matches = abc.instance.flatMap((instance: any, classIndex: number) =>
+    [
+      ...(instance.trait ?? []).map((trait: any) => ({ trait, classIndex, static: false })),
+      ...(abc.class[classIndex].traits ?? []).map((trait: any) => ({ trait, classIndex, static: true })),
+    ].filter(({ trait }) => trait.data?.method === methodId),
+  )
+  assert(matches.length === 1, `expected one trait for method ${methodId}`)
+  const key = qnameKey(abc.constant_pool.multiname[matches[0].trait.name - 1])
+  assert(key, `method ${methodId} does not have an exact QName`)
+  return key
+}
 const references = exactReferencesForQName(targetQNameKey)
+const restoredRosterListReferences = exactReferencesForQName(exactQNameAt(6510, 1358))
+const restoredCopyMethodReferences = exactReferencesForQName(methodQName(2921))
+const fighterFactoryReferences = exactReferencesForQName(methodQName(3071))
 const methodTraitReferences = (targetClass.trait as any[])
   .filter((trait) => trait.data?.method !== undefined)
   .map((trait) => {
@@ -235,7 +269,10 @@ const namedReferences = Object.fromEntries(
 )
 const ledgerDigests = {
   exactTraitReferences: sha256(JSON.stringify(references)),
+  restoredRosterListReferences: sha256(JSON.stringify(restoredRosterListReferences)),
   methodTraitReferences: sha256(JSON.stringify(methodTraitReferences)),
+  restoredCopyMethodReferences: sha256(JSON.stringify(restoredCopyMethodReferences)),
+  fighterFactoryReferences: sha256(JSON.stringify(fighterFactoryReferences)),
   namedReferences: sha256(JSON.stringify(namedReferences)),
   stringReferences: sha256(JSON.stringify(stringReferences)),
 }
@@ -246,6 +283,18 @@ assert(
 assert(
   ledgerDigests.methodTraitReferences === 'c2c6c429a37e214ab2df2808e8d4703319abdf20582a2c6f057b7de515830d1f',
   'method-reference ledger changed',
+)
+assert(
+  ledgerDigests.restoredRosterListReferences === '58e5c892b820110aa0f08e3d68451e4586e16dae78f4daae370d8d1f623e7e42',
+  'restored roster-list reference ledger changed',
+)
+assert(
+  ledgerDigests.restoredCopyMethodReferences === '4dfba81ed09974e62b45178365562ec381f80b5057e78dc4e3848b0dba050db9',
+  'restored-copy method-reference ledger changed',
+)
+assert(
+  ledgerDigests.fighterFactoryReferences === '0d633de093a0975d46444a37bc2654d35d0a83384da6a8582e8716c1685a531d',
+  'fighter-factory reference ledger changed',
 )
 assert(
   ledgerDigests.namedReferences === '5f45e071f814e588e2a1d7f5ce1e1b54f39fb9642d84560c03e1380c7cef2b02',
@@ -317,12 +366,94 @@ requireAt(6519, 620, 'getproperty', TARGET_TRAIT)
 requireAt(6519, 623, 'callpropvoid', '_-r5D')
 requireAt(6519, 1058, 'getproperty', '_-n3I')
 requireAt(6519, 1069, 'callpropvoid', '_-Q5R')
+requireAt(6510, 883, 'findpropstrict', '_-kv')
+requireAt(6510, 887, 'constructprop', '_-kv')
+assert(requireAt(6510, 896, 'setlocal').params[0] === 23, 'reader does not store the roster in local 23')
+assert(requireAt(6510, 1033, 'getlocal').params[0] === 23, 'reader does not restore local 23 bitset')
 requireAt(6510, 1035, 'getproperty', '_-n3I')
 requireAt(6510, 1039, 'callpropvoid', '_-N4v')
+requireAt(6510, 1358, 'getproperty', '_-I1a')
+assert(requireAt(6510, 1363, 'getlocal').params[0] === 23, 'reader does not publish local 23')
+requireAt(6510, 1365, 'setproperty')
+requireAt(3507, 304, 'getproperty', '_-I1a')
+requireAt(3507, 309, 'getproperty')
+requireAt(3507, 313, 'coerce', '_-kv')
+assert(requireAt(3507, 321, 'setlocal').params[0] === 7, 'replay bridge does not store the roster in local 7')
+requireAt(3507, 338, 'getlex', '_-V4R')
+requireAt(3507, 341, 'getlocal_0')
+requireAt(3507, 342, 'getlocal_1')
+requireAt(3507, 343, 'getproperty', '_-652')
+assert(requireAt(3507, 347, 'getlocal').params[0] === 6, 'replay bridge factory argument 2 has changed')
+requireAt(3507, 349, 'getproperty')
+requireAt(3507, 353, 'coerce', 'String')
+assert(requireAt(3507, 357, 'getlocal').params[0] === 6, 'replay bridge factory argument 3 has changed')
+requireAt(3507, 359, 'getlex', '_-V4R')
+requireAt(3507, 362, 'getproperty', '_-6c')
+requireAt(3507, 366, 'getlex', '_-V4R')
+requireAt(3507, 369, 'getproperty', '_-76C')
+requireAt(3507, 373, 'bitor')
+assert(requireAt(3507, 374, 'getlocal').params[0] === 7, 'replay bridge does not pass local 7 as argument 5')
+const factoryCall = requireAt(3507, 376, 'callproperty', '_-HT')
+assert(factoryCall.params[1] === 5, 'replay bridge does not pass five fighter-factory arguments')
+requireAt(3071, 0, 'findpropstrict', '_-V4R')
+requireAt(3071, 3, 'getlocal_1')
+requireAt(3071, 4, 'getlocal_2')
+requireAt(3071, 5, 'getlocal_3')
+for (const [pc, local] of [
+  [6, 4],
+  [8, 5],
+  [10, 6],
+  [12, 7],
+  [14, 8],
+]) {
+  assert(requireAt(3071, pc, 'getlocal').params[0] === local, `fighter factory does not forward local ${local}`)
+}
+const constructorCall = requireAt(3071, 16, 'constructprop', '_-V4R')
+assert(constructorCall.params[1] === 8, 'fighter factory does not forward all constructor arguments')
+requireAt(2790, 4872, 'findproperty', '_-a5C')
+assert(requireAt(2790, 4881, 'getlocal').params[0] === 5, 'fighter constructor does not read roster parameter 5')
+requireAt(2790, 4894, 'getproperty', '_-n3I')
+const restoredCopyCall = requireAt(2790, 4906, 'callpropvoid', '_-a5C')
+assert(restoredCopyCall.params[1] === 4, 'fighter constructor does not pass four restored-copy arguments')
 requireAt(2921, 177, 'getproperty', '_-n3I')
+assert(requireAt(2921, 180, 'getlocal').params[0] === 4, 'restored copy does not read bitset parameter 4')
 requireAt(2921, 182, 'getproperty', TARGET_TRAIT)
 requireAt(2921, 185, 'callpropvoid', '_-r5D')
 requireAt(1535, 334, 'getproperty', '_-n3I')
+const rosterRecordQName = exactQNameAt(6510, 887)
+const fighterClassOwner = owners.get(2790)
+assert(fighterClassOwner, 'fighter constructor has no class owner')
+assert(methodParamTypeQName(3507, 0) === classQName(356), 'replay bridge input is not the exact parsed replay type')
+assert(methodParamTypeQName(3071, 4) === rosterRecordQName, 'fighter factory parameter 5 is not the exact roster type')
+assert(
+  methodParamTypeQName(2790, 4) === rosterRecordQName,
+  'fighter constructor parameter 5 is not the exact roster type',
+)
+assert(
+  methodParamTypeQName(2921, 3) === classQName(classIndex),
+  'restored-copy parameter 4 is not the exact bitset type',
+)
+assert(
+  exactQNameAt(3071, 16) === classQName(fighterClassOwner.classIndex),
+  'factory constructprop is not the exact fighter class',
+)
+assert(abc.instance[fighterClassOwner.classIndex].iinit === 2790, 'fighter class constructor is not method 2790')
+assert(exactQNameAt(6510, 1358) === exactQNameAt(3507, 304), 'reader and replay bridge use different roster lists')
+assert(exactQNameAt(3507, 376) === methodQName(3071), 'replay bridge does not call the exact fighter factory')
+assert(
+  exactQNameAt(2790, 4906) === methodQName(2921),
+  'fighter constructor does not call the exact restored-copy method',
+)
+assert(
+  exactQNameAt(6510, 1035) === exactQNameAt(2790, 4894),
+  'reader and fighter constructor use different roster fields',
+)
+assert(
+  exactQNameAt(2790, 4894) === exactQNameAt(2921, 177),
+  'fighter constructor and restored copy use different roster fields',
+)
+assert(exactQNameAt(2921, 177) === exactQNameAt(1535, 334), 'restored copy and consumer use different roster fields')
+assert(exactQNameAt(2921, 182) === targetQNameKey, 'restored copy source is not the generic bitset word array')
 requireAt(1535, 342, 'getproperty', '_-ol')
 requireAt(1535, 345, 'getproperty', '_-G5t')
 requireAt(1535, 349, 'callproperty', '_-O1D')
@@ -340,8 +471,11 @@ const anchors = {
   storeRemoval: [5269, 1535, 1579, 1585, 1589, 1590],
   rosterAssembly: [14520, 875, 882, 886, 889],
   replayWriter: [6519, 612, 617, 620, 623, 1058, 1069],
-  replayReader: [6510, 1035, 1039],
-  restoredCopy: [2921, 177, 182, 185],
+  replayReader: [6510, 883, 887, 896, 1035, 1039, 1358, 1363, 1365],
+  replayBridge: [3507, 304, 309, 313, 321, 338, 341, 342, 343, 347, 349, 353, 357, 359, 362, 366, 369, 373, 374, 376],
+  fighterFactory: [3071, 0, 3, 4, 5, 6, 8, 10, 12, 14, 16],
+  fighterConstructorCopy: [2790, 4872, 4881, 4894, 4906],
+  restoredCopy: [2921, 177, 180, 182, 185],
   tauntConsumer: [1535, 334, 342, 345, 349],
 }
 const output: Record<string, unknown> = {
@@ -364,6 +498,9 @@ const output: Record<string, unknown> = {
     exactFieldInstructionCount: references.reduce((count, entry) => count + entry.references.length, 0),
     ledgers: ledgerDigests,
     exactFieldReferences: references,
+    restoredRosterListReferences,
+    restoredCopyMethodReferences,
+    fighterFactoryReferences,
   },
   corpus: { used: false, reason: 'static producer-to-gameplay-consumer closure proves the requested semantics' },
 }
@@ -380,6 +517,9 @@ if (process.argv.includes('--explore')) {
     6527,
     12625,
     ...references.map((entry) => entry.methodId),
+    ...restoredRosterListReferences.map((entry) => entry.methodId),
+    ...restoredCopyMethodReferences.map((entry) => entry.methodId),
+    ...fighterFactoryReferences.map((entry) => entry.methodId),
     ...methodTraitReferences.flatMap((trait) => trait.references.map((entry) => entry.methodId)),
   ])
   output.methods = [...relevantIds]

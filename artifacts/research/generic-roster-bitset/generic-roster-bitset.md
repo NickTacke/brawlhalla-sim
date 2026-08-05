@@ -31,7 +31,10 @@ All digests are SHA-256.
 | Sole semantic build string in the ABC | `10.09.96325` | Build identity |
 | ABC decoder | `abc-disassembler` commit `ad9714d`, pinned by `bun.lock` | Instruction and byte-PC decoding |
 | Exact `_-Z3L` reference ledger | `615c07f5ac1b0fb781ee4c28d83fd8f834d6992ca0d257b9024c1288481b6f00` | 137 exact-QName instructions in 37 methods |
+| Restored roster-list reference ledger | `58e5c892b820110aa0f08e3d68451e4586e16dae78f4daae370d8d1f623e7e42` | Exact parser publication and replay-start retrieval of `_-I1a` |
 | All class-30 bitset-method callsites | `c2c6c429a37e214ab2df2808e8d4703319abdf20582a2c6f057b7de515830d1f` | Broad consumer/producer search |
+| Restored-copy method callsites | `4dfba81ed09974e62b45178365562ec381f80b5057e78dc4e3848b0dba050db9` | Exact constructor call into method 2921 |
+| Fighter-factory method callsites | `0d633de093a0975d46444a37bc2654d35d0a83384da6a8582e8716c1685a531d` | Pins the exact callsite set, including replay method 3507; other callsites are not semantically classified |
 | Named-reference search ledger | `5f45e071f814e588e2a1d7f5ce1e1b54f39fb9642d84560c03e1380c7cef2b02` | `mFavoriteWeapons`, `_-n3I`, `_-n3Q`, and `_-M6S` disposition |
 | Readable-string search ledger | `e137e1773fc41a4c1580839af0832a11954e25b2e8a233ed029840a623fb2732` | `TauntID`, `Taunt`, and default-name search |
 
@@ -84,6 +87,9 @@ TauntType source key "TauntID" -> TauntType._-G5t
   -> method 578 emits (presence 1, uint word)* then presence 0
   -> replay reader 6510 calls restoredRoster._-n3I._-N4v
   -> method 585 restores/truncates the word array
+  -> reader 6510 publishes restoredRoster in parsedReplay._-I1a
+  -> replay-start method 3507 retrieves that exact roster and passes it to factory 3071
+  -> constructor 2790 passes restoredRoster._-n3I to copy method 2921
   -> method 2921 copies restoredRoster._-n3I._-Z3L to fighter._-n3I
   -> gameplay method 1535 selects a set TauntID through method 589
   -> typed TauntType registry lookup
@@ -109,9 +115,11 @@ Replay reader method 6510 reads each roster record's `_-n3I` and calls method 58
 
 Method 585 first records the existing word-array length at PCs 7-13. Each true marker read through `_-14J` at PC 82 admits one unsigned word read through `_-8v` at PC 30. The reader overwrites an existing array cell at PC 54 or pushes a new cell at PC 70. When the false marker ends the list, PCs 103-114 splice any old tail beyond the new count. Thus writer words become the restored `_-n3I._-Z3L` exactly, including zero words and their serialized length.
 
+Reader 6510 constructs the roster as typed `_-kv` in local 23 at PCs 883-896, mutates local 23 through the `_-n3I` reader, and publishes that same local into the exact parsed-replay roster list `_-I1a` at PCs 1358-1365. Replay-start method 3507 reads that same exact-QName list at PC 304, stores its typed `_-kv` entry in local 7 at PCs 309-321, and passes local 7 as argument 5 to exact factory method 3071 at PCs 338-376. Factory 3071 forwards parameter 5 unchanged into the exact class whose constructor is method 2790. Constructor 2790 reads that typed roster parameter's exact `_-n3I` at PC 4894 and invokes exact copy method 2921 at PC 4906. Local indices, parameter QNames, stack order, argument counts, constructor identity, and method and field QNames are asserted by the analyzer.
+
 ### Gameplay consumer
 
-Method 2921 copies restored `_-n3I._-Z3L` into the fighter's `_-n3I` at PCs 177-185.
+Method 2921 copies the reader-restored `_-n3I._-Z3L` into the fighter's exact same `_-n3I` field at PCs 177-185.
 
 Gameplay method 1535 then reads that fighter bitset at PC 334. It supplies a `TauntType._-G5t` at PC 345 to bitset selection method 589 `_-O1D` at PC 349, and indexes the typed `TauntType` registry with the returned ID at PC 354. Method 589's PCs 141-151, 187-197, and 423-492 use bit-test method 600 and return only an ID whose corresponding bit is set. This is a downstream gameplay decision, not a UI-only display.
 
@@ -131,14 +139,14 @@ There is no distinct absent/null bitset encoding inside a present roster record.
 
 ## Complete reference closure
 
-The analyzer keys by exact QName namespace/name pairs, not string coincidence. It finds 137 exact `_-Z3L` instructions in 37 methods and hashes the ordered method/PC/opcode ledger. It separately hashes every exact callsite of all 23 class-30 methods, including 68 setter references and 56 bit-test references. Named searches cover all references to `mFavoriteWeapons`, `_-n3I`, `_-n3Q`, and `_-M6S`; readable-string searches cover `TauntID`, every literal `Taunt`, and the absence of a literal `DefaultTaunt`.
+The analyzer keys by exact QName namespace/name pairs, not string coincidence. It finds 137 exact `_-Z3L` instructions in 37 methods and hashes the ordered method/PC/opcode ledger. It separately hashes every exact callsite of all 23 class-30 methods, including 68 setter references and 56 bit-test references. Three additional exact-QName ledgers close the reader-to-gameplay bridge: every reference to the reader-owned `_-I1a` roster list, every callsite of factory 3071, and every callsite of copy method 2921. Named searches cover all references to `mFavoriteWeapons`, `_-n3I`, `_-n3Q`, and `_-M6S`; readable-string searches cover `TauntID`, every literal `Taunt`, and the absence of a literal `DefaultTaunt`.
 
 This broad search has two consequences:
 
 1. It proves the container is generic and prevents a global taunt-specific rename.
 2. It closes the roster-specific taunt chain across independent producers, serializer, reader, restored copy, query, and gameplay selection rather than naming from one suggestive site.
 
-The detailed exact-field ledger is emitted as privacy-safe JSON by the command below. The four ledger digests make the analyzer fail closed if any member, PC, opcode, owner, or ordering changes.
+The detailed exact-field and dataflow ledgers are emitted as privacy-safe JSON by the command below. The seven ledger digests make the analyzer fail closed if any member, PC, opcode, owner, or ordering changes.
 
 ## Reproducible validation
 
@@ -159,7 +167,7 @@ bun tools/avm2-provenance/generic_roster_bitset_provenance.ts \
   | jq '.status, .identity, .field, .anchors, .referenceClosure.ledgers'
 ```
 
-Successful output reports `proven-for-pinned-abc`, build `10.09.96325`, ABC digest `9fe9...ba2d`, 15,010 decoded method bodies, valid branch targets, 37 exact-field methods, 137 exact-field instructions, and the four ledger hashes above.
+Successful output reports `proven-for-pinned-abc`, build `10.09.96325`, ABC digest `9fe9...ba2d`, 15,010 decoded method bodies, valid branch targets, 37 exact-field methods, 137 exact-field instructions, and the seven ledger hashes above.
 
 The analyzer emits no ABC bytes, source payload, replay bytes, fixture names, player names, player IDs, account data, or local input path. Operating-system errors can still reveal a caller-supplied path.
 
