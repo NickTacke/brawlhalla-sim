@@ -11,7 +11,8 @@
     "lint": "biome check .",
     "smoke:packages": "node --input-type=module -e \"await import('./packages/replay-format/dist/index.js'); await import('./packages/core/dist/index.js')\"",
     "format": "biome format --write .",
-    "provenance:movement": "bun run --cwd tools/avm2-provenance movement-provenance"
+    "provenance:movement": "bun run --cwd tools/avm2-provenance movement-provenance",
+    "provenance:game-settings-word-14": "bun tools/avm2-provenance/game_settings_word_14_provenance.ts"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.0",
