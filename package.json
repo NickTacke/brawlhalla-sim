@@ -13,7 +13,8 @@
     "format": "biome format --write .",
     "provenance:movement": "bun run --cwd tools/avm2-provenance movement-provenance",
     "provenance:game-settings-word-14": "bun run --cwd tools/avm2-provenance build-dependency && bun tools/avm2-provenance/game_settings_word_14_provenance.ts",
-    "provenance:offensive-hitbox-timing": "bun run --cwd tools/avm2-provenance offensive-hitbox-timing-provenance"
+    "provenance:offensive-hitbox-timing": "bun run --cwd tools/avm2-provenance offensive-hitbox-timing-provenance",
+    "provenance:offensive-target-policy": "bun run --cwd tools/avm2-provenance offensive-target-policy-provenance"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.0",
