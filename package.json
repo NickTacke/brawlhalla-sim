@@ -7,12 +7,13 @@
     "build": "bun run --filter @brawlhalla-sim/replay-format build && bun run --filter @brawlhalla-sim/core build",
     "check": "bun run build && bun run smoke:packages && bun run typecheck && bun run test && bun run lint",
     "typecheck": "bun run --filter @brawlhalla-sim/replay-format typecheck && bun run --filter @brawlhalla-sim/core typecheck && bun run --filter @brawlhalla-sim/avm2-provenance typecheck",
-    "test": "bun test packages",
+    "test": "bun test packages tools/avm2-provenance/tests",
     "lint": "biome check .",
     "smoke:packages": "node --input-type=module -e \"await import('./packages/replay-format/dist/index.js'); await import('./packages/core/dist/index.js')\"",
     "format": "biome format --write .",
     "provenance:movement": "bun run --cwd tools/avm2-provenance movement-provenance",
-    "provenance:game-settings-word-14": "bun run --cwd tools/avm2-provenance build-dependency && bun tools/avm2-provenance/game_settings_word_14_provenance.ts"
+    "provenance:game-settings-word-14": "bun run --cwd tools/avm2-provenance build-dependency && bun tools/avm2-provenance/game_settings_word_14_provenance.ts",
+    "provenance:replay-lifecycle-trace-hooks": "bun run --cwd tools/avm2-provenance replay-lifecycle-trace-hooks-provenance"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.0",

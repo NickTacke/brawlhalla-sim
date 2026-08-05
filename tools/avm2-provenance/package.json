@@ -6,6 +6,8 @@
     "build-dependency": "cd node_modules/abc-disassembler && bun run ttsc --types node",
     "movement-provenance": "bun run build-dependency && bun movement_provenance.ts --abc ../../artifacts/main.abc --target grounded-jump-y",
     "game-settings-word-14-provenance": "bun run build-dependency && bun game_settings_word_14_provenance.ts",
+    "replay-lifecycle-trace-hooks-provenance": "bun run build-dependency && bun replay_lifecycle_trace_hooks_provenance.ts",
+    "test": "bun test tests",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
