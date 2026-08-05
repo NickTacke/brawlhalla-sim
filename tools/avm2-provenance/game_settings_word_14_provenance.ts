@@ -51,21 +51,82 @@ const EXPECTED_RULES_SHA256 = 'f1ee7530c4e0693232c8a4fdc93163f676691259dc2da9e83
 const EXPECTED_FIXTURE_COUNT = 12
 const SETTINGS_CLASS_INDEX = 187
 const SETTINGS_TRAIT_NAME = '_-Ii'
-const EXPECTED_REFERENCE_COUNTS = new Map([
-  [3747, 2],
-  [3748, 2],
-  [3758, 2],
-  [3759, 2],
-  [3766, 2],
-  [3783, 4],
-  [3790, 3],
-  [4771, 1],
-  [4774, 1],
-  [4780, 1],
-  [5573, 1],
-  [6884, 1],
-  [8597, 2],
-  [8617, 6],
+const EXPECTED_REFERENCES = new Map<number, Array<{ pc: number; opcode: string }>>([
+  [
+    3747,
+    [
+      { pc: 177, opcode: 'findproperty' },
+      { pc: 181, opcode: 'getproperty' },
+    ],
+  ],
+  [
+    3748,
+    [
+      { pc: 164, opcode: 'findproperty' },
+      { pc: 168, opcode: 'getproperty' },
+    ],
+  ],
+  [
+    3758,
+    [
+      { pc: 181, opcode: 'findproperty' },
+      { pc: 192, opcode: 'initproperty' },
+    ],
+  ],
+  [
+    3759,
+    [
+      { pc: 168, opcode: 'findproperty' },
+      { pc: 178, opcode: 'initproperty' },
+    ],
+  ],
+  [
+    3766,
+    [
+      { pc: 126, opcode: 'findproperty' },
+      { pc: 132, opcode: 'initproperty' },
+    ],
+  ],
+  [
+    3783,
+    [
+      { pc: 36, opcode: 'findproperty' },
+      { pc: 40, opcode: 'getproperty' },
+      { pc: 128, opcode: 'findproperty' },
+      { pc: 132, opcode: 'getproperty' },
+    ],
+  ],
+  [
+    3790,
+    [
+      { pc: 162, opcode: 'findproperty' },
+      { pc: 167, opcode: 'getproperty' },
+      { pc: 171, opcode: 'initproperty' },
+    ],
+  ],
+  [4771, [{ pc: 53, opcode: 'getproperty' }]],
+  [4774, [{ pc: 108, opcode: 'getproperty' }]],
+  [4780, [{ pc: 98, opcode: 'getproperty' }]],
+  [5573, [{ pc: 78, opcode: 'getproperty' }]],
+  [6884, [{ pc: 120, opcode: 'getproperty' }]],
+  [
+    8597,
+    [
+      { pc: 542, opcode: 'getproperty' },
+      { pc: 1327, opcode: 'getproperty' },
+    ],
+  ],
+  [
+    8617,
+    [
+      { pc: 889, opcode: 'initproperty' },
+      { pc: 909, opcode: 'getproperty' },
+      { pc: 960, opcode: 'initproperty' },
+      { pc: 967, opcode: 'getproperty' },
+      { pc: 1737, opcode: 'getproperty' },
+      { pc: 1744, opcode: 'initproperty' },
+    ],
+  ],
 ])
 const BRANCHES = new Set([
   'ifeq',
@@ -226,6 +287,57 @@ function requireInstruction(
   return match
 }
 
+function requireInstructionAt(
+  methods: Map<number, LocatedInstruction[]>,
+  strings: string[],
+  methodId: number,
+  pc: number,
+  opcode: string,
+  name?: string,
+): LocatedInstruction {
+  const instruction = methods.get(methodId)?.find((candidate) => candidate.pc === pc)
+  assert(instruction, `method ${methodId} lacks instruction at PC ${pc}`)
+  assert(instruction.name === opcode, `method ${methodId} PC ${pc} is not ${opcode}`)
+  if (name !== undefined) {
+    assert(instructionName(instruction, strings) === name, `method ${methodId} PC ${pc} does not name ${name}`)
+  }
+  return instruction
+}
+
+function requireEnumDefinition(
+  methods: Map<number, LocatedInstruction[]>,
+  strings: string[],
+  labelPc: number,
+  label: string,
+  expectedIndex: number,
+): { labelPc: number; index: number } {
+  const labelInstruction = requireInstructionAt(methods, strings, 8530, labelPc, 'pushstring', label)
+  const indexInstruction = methods.get(8530)?.[labelInstruction.index + 1]
+  assert(indexInstruction?.name === 'pushshort', `${label} lacks its adjacent enum index`)
+  assert(indexInstruction.params[0] === expectedIndex, `${label} index is not ${expectedIndex}`)
+  return { labelPc, index: expectedIndex }
+}
+
+function requireSwitchCaseTarget(
+  methods: Map<number, LocatedInstruction[]>,
+  strings: string[],
+  methodId: number,
+  switchPc: number,
+  caseIndex: number,
+  expectedTarget: number,
+): void {
+  const instruction = requireInstructionAt(methods, strings, methodId, switchPc, 'lookupswitch')
+  const entries = instruction.params[2]
+  assert(Array.isArray(entries), `method ${methodId} PC ${switchPc} has no switch entries`)
+  const entry = entries[caseIndex]
+  const offset = Array.isArray(entry) ? entry[1] : entry
+  assert(typeof offset === 'number', `method ${methodId} switch case ${caseIndex} has no numeric target`)
+  assert(
+    instruction.pc + offset === expectedTarget,
+    `method ${methodId} switch case ${caseIndex} does not target PC ${expectedTarget}`,
+  )
+}
+
 function instructionRange(
   methods: Map<number, LocatedInstruction[]>,
   methodId: number,
@@ -315,6 +427,7 @@ assert(
 )
 const traitDefinition = traitDefinitions[0]
 assert((traitDefinition.kind & 0x0f) === 0, `${SETTINGS_TRAIT_NAME} is not a slot trait`)
+assert(traitDefinition.data.vindex === 0, `${SETTINGS_TRAIT_NAME} has an explicit constant initializer`)
 assert(
   multinameName(abc.constant_pool.multiname[traitDefinition.data.type_name - 1], strings) === 'uint',
   `${SETTINGS_TRAIT_NAME} is not uint`,
@@ -332,14 +445,16 @@ const exactReferences = [...methods.entries()]
       .map((instruction) => ({ pc: instruction.pc, opcode: instruction.name })),
   }))
   .filter((entry) => entry.references.length > 0)
-assert(exactReferences.length === EXPECTED_REFERENCE_COUNTS.size, 'unexpected exact-trait reference method count')
+assert(exactReferences.length === EXPECTED_REFERENCES.size, 'unexpected exact-trait reference method count')
 for (const entry of exactReferences) {
+  const expected = EXPECTED_REFERENCES.get(entry.methodId)
+  assert(expected, `unexpected exact ${SETTINGS_TRAIT_NAME} references in method ${entry.methodId}`)
   assert(
-    EXPECTED_REFERENCE_COUNTS.get(entry.methodId) === entry.references.length,
-    `unexpected ${SETTINGS_TRAIT_NAME} reference count in method ${entry.methodId}`,
+    JSON.stringify(entry.references) === JSON.stringify(expected),
+    `unexpected exact ${SETTINGS_TRAIT_NAME} reference ledger in method ${entry.methodId}`,
   )
 }
-for (const [methodId] of EXPECTED_REFERENCE_COUNTS) {
+for (const [methodId] of EXPECTED_REFERENCES) {
   assert(
     exactReferences.some((entry) => entry.methodId === methodId),
     `missing method ${methodId} exact references`,
@@ -374,21 +489,87 @@ const cohortRuleSets = cohortRuleSetIds.map((ruleSetId) => {
   return summary
 })
 
+const enumDefinitions = {
+  alwaysHaveItemSelect: requireEnumDefinition(methods, strings, 49, 'Game_AlwaysHaveItemSelect', 4),
+  alwaysEquipRandom: requireEnumDefinition(methods, strings, 162, 'Game_GadgetsSelectionsAlwaysEquipRandom', 5),
+  alwaysEquipSingle: requireEnumDefinition(methods, strings, 185, 'Game_GadgetsSelectionsAlwaysEquipSingle', 6),
+  gadgetSelections: requireEnumDefinition(methods, strings, 140, 'Game_GadgetsSelections', 18),
+}
+for (const [caseIndex, target] of [
+  [4, 851],
+  [5, 1715],
+  [6, 908],
+  [18, 1715],
+] as const) {
+  requireSwitchCaseTarget(methods, strings, 8617, 194, caseIndex, target)
+}
+for (const [caseIndex, target] of [
+  [4, 460],
+  [5, 1324],
+  [6, 508],
+  [18, 1324],
+] as const) {
+  requireSwitchCaseTarget(methods, strings, 8597, 193, caseIndex, target)
+}
+
+const modeZero = requireInstructionAt(methods, strings, 3766, 130, 'pushbyte')
+assert(modeZero.params[0] === 0, 'mode-derived mask assignment is not zero')
+requireInstructionAt(methods, strings, 3766, 132, 'initproperty', SETTINGS_TRAIT_NAME)
+
+requireInstructionAt(methods, strings, 8617, 853, 'getproperty', '_-p2p')
+const alwaysHaveItemFlag = requireInstructionAt(methods, strings, 8617, 856, 'pushbyte')
+assert(alwaysHaveItemFlag.params[0] === 16, 'always-have-item flag is not 0x10')
+requireInstructionAt(methods, strings, 8617, 859, 'bitxor')
+requireInstructionAt(methods, strings, 8617, 860, 'initproperty', '_-p2p')
+const alwaysHaveItemValueBranch = requireInstructionAt(methods, strings, 8617, 875, 'iffalse')
+assert(
+  alwaysHaveItemValueBranch.endPc + Number(alwaysHaveItemValueBranch.params[0]) === 886,
+  'enabled always-have-item branch does not target the 0xfe byte literal',
+)
+const disabledValue = requireInstructionAt(methods, strings, 8617, 879, 'pushbyte')
+const enabledValue = requireInstructionAt(methods, strings, 8617, 886, 'pushbyte')
+assert(disabledValue.params[0] === 0, 'disabled always-have-item branch does not clear the mask')
+assert(enabledValue.params[0] === 254, 'enabled always-have-item branch does not produce uint(-2)')
+requireInstructionAt(methods, strings, 8617, 881, 'convert_u')
+requireInstructionAt(methods, strings, 8617, 888, 'convert_u')
+requireInstructionAt(methods, strings, 8617, 889, 'initproperty', SETTINGS_TRAIT_NAME)
+
+requireInstructionAt(methods, strings, 8617, 909, 'getproperty', SETTINGS_TRAIT_NAME)
+requireInstructionAt(methods, strings, 8617, 922, 'getproperty', '_-b5D')
+requireInstructionAt(methods, strings, 8617, 939, 'callproperty', '_-S3k')
+requireInstructionAt(methods, strings, 8617, 945, 'initproperty', '_-b5D')
+requireInstructionAt(methods, strings, 8617, 953, 'getproperty', '_-b5D')
+requireInstructionAt(methods, strings, 8617, 957, 'lshift')
+requireInstructionAt(methods, strings, 8617, 959, 'bitnot')
+requireInstructionAt(methods, strings, 8617, 960, 'initproperty', SETTINGS_TRAIT_NAME)
+
+const sharedToggleBranch = requireInstructionAt(methods, strings, 8617, 1718, 'ifne')
+assert(
+  sharedToggleBranch.endPc + Number(sharedToggleBranch.params[0]) === 1756,
+  'shared gadget-selection nonzero-action branch does not target PC 1756',
+)
+requireInstructionAt(methods, strings, 8617, 1725, 'callproperty', '_-R5M')
+requireInstructionAt(methods, strings, 8617, 1730, 'lshift')
+requireInstructionAt(methods, strings, 8617, 1737, 'getproperty', SETTINGS_TRAIT_NAME)
+requireInstructionAt(methods, strings, 8617, 1743, 'bitxor')
+requireInstructionAt(methods, strings, 8617, 1744, 'initproperty', SETTINGS_TRAIT_NAME)
+requireInstructionAt(methods, strings, 8617, 1793, 'initproperty', '_-b5D')
+
 const anchors = {
   settingsWriter: requireInstruction(methods, strings, 3748, 'getproperty', SETTINGS_TRAIT_NAME).pc,
   settingsReader: requireInstruction(methods, strings, 3759, 'initproperty', SETTINGS_TRAIT_NAME).pc,
   replayWriterCall: requireInstruction(methods, strings, 6519, 'callpropvoid', '_-33g').pc,
   replayReaderCall: requireInstruction(methods, strings, 6510, 'callpropvoid', '_-N4v').pc,
-  defaultOverride: requireInstruction(methods, strings, 3766, 'initproperty', SETTINGS_TRAIT_NAME).pc,
+  modeDerivedZeroWrite: 132,
   validatorMaskRead: requireInstruction(methods, strings, 3783, 'getproperty', SETTINGS_TRAIT_NAME).pc,
   spawnBuilderMaskBranch: requireInstruction(methods, strings, 4779, 'bitand', '').pc,
   gameplayFilterMaskRead: requireInstruction(methods, strings, 5573, 'getproperty', SETTINGS_TRAIT_NAME).pc,
-  uiMaskRead: requireInstruction(methods, strings, 8597, 'getproperty', SETTINGS_TRAIT_NAME).pc,
-  uiMaskWrite: requireInstruction(methods, strings, 8617, 'initproperty', SETTINGS_TRAIT_NAME).pc,
+  uiMaskReads: [542, 1327],
+  uiMaskWrites: [889, 960, 1744],
   gadgetListSourceLabel: requireInstruction(methods, strings, 4818, 'pushstring', 'GadgetList').pc,
   gadgetListTypedResolution: requireInstruction(methods, strings, 4819, 'initproperty', '_-W4N').pc,
   alwaysEquipSourceLabel: requireInstruction(methods, strings, 7279, 'pushstring', 'AlwaysEquipItem').pc,
-  gadgetSelectionsEnumLabel: requireInstruction(methods, strings, 8530, 'pushstring', 'Game_GadgetsSelections').pc,
+  enumDefinitions,
   banGadgetsUiLabel: requireInstruction(methods, strings, 8612, 'pushstring', 'UI_GameSettings_Ban_Gadgets').pc,
   controlFlowRanges: {
     alwaysEquipValidator: instructionRange(methods, 3783, 9, 65),
@@ -396,8 +577,9 @@ const anchors = {
     spawnTickFilteredVectorUse: instructionRange(methods, 4754, 220, 250),
     itemSelectionAndSpawn: instructionRange(methods, 4791, 0, 23),
     gameplayPowerFilter: instructionRange(methods, 5573, 30, 77),
-    uiRandomSingleOverride: instructionRange(methods, 8617, 292, 353),
-    uiMultiSelectionToggle: instructionRange(methods, 8617, 693, 713),
+    alwaysHaveItemMaskInitialization: instructionRange(methods, 8617, 292, 319),
+    alwaysEquipSingleSelection: instructionRange(methods, 8617, 320, 354),
+    sharedGadgetSelectionToggle: instructionRange(methods, 8617, 693, 713),
   },
 }
 
@@ -420,10 +602,17 @@ const output = {
     traitName: SETTINGS_TRAIT_NAME,
     type: 'uint',
     defaultValue: 0,
+    defaultBasis:
+      'uint slot has no explicit initializer; constructor does not write it; mode normalization writes zero',
     bitPolarity: '1 disables the GadgetList entry at the same zero-based index; 0 leaves it enabled',
     serializedRange: [0, 0xffffffff],
     activeBits: 'zero-based indices below the selected ItemSpawnRuleSet GadgetList length',
     alwaysEquipValidation: 'zero is accepted; nonzero requires a gadget list and may not set every active low bit',
+    uiWrites: {
+      alwaysHaveItemSelectCase4: 'toggles flag 0x10; writes zero when clear and 0xfffffffe when set',
+      alwaysEquipSingleCase6: 'writes the complement of one shifted by the selected gadget index',
+      sharedCases5And18: 'when argument 2 is zero, XORs one shifted by the control-selected gadget index',
+    },
   },
   anchors,
   exactTraitReferences: {

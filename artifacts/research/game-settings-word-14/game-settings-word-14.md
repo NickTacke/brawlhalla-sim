@@ -36,15 +36,15 @@ The analyzer decodes all 15,010 ABC method bodies, rejects any invalid branch ta
 
 ## Typed field and readable naming closure
 
-Class 187 `_-I37` is the normalized game-settings object. Its instance trait `_-Ii` is a slot typed as AVM2 `uint`. The trait has no explicit constant initializer. Constructor method 3744 initializes only the two percentage defaults and does not override `_-Ii`.
+Class 187 `_-I37` is the normalized game-settings object. Its instance trait `_-Ii` is a slot typed as AVM2 `uint`. The trait has no explicit constant initializer, so AVM2 field initialization gives it the `uint` zero value. Constructor method 3744 initializes only the two percentage defaults and does not write `_-Ii`.
 
 Method 3746 `toString` labels the other fixed settings with strings such as `ItemSpawnRuleSetID:`, `WeaponSpawnRateID:`, and `GadgetSpawnRateID:`. It contains no exact reference to `_-Ii` and supplies no label for word 14. Therefore a literal original field name is not recovered from that method.
 
 The semantic closure comes from exact typed dataflow:
 
 1. Method 4818 PC 143 recognizes the shipped `GadgetList` source element. Method 4819 PC 492 resolves its ordered strings to the typed `Vector.<ItemType>` field `_-E2c._-W4N`.
-2. Method 8530 PC 140 declares the readable UI/settings enum `Game_GadgetsSelections` with index 18.
-3. The index-18 cases in methods 8597 and 8617 read and mutate exact trait `_-Ii`. Method 8597 reads the current mask at PC 1327. Method 8617 PCs 1715-1756 toggles `1 << selectedIndex` in that mask.
+2. Method 8530 initializes four relevant readable UI/settings enum entries: `Game_AlwaysHaveItemSelect` at PC 49 with index 4, `Game_GadgetsSelectionsAlwaysEquipRandom` at PC 162 with index 5, `Game_GadgetsSelectionsAlwaysEquipSingle` at PC 185 with index 6, and `Game_GadgetsSelections` at PC 140 with index 18.
+3. Method 8617's switch sends case 4 to PC 851, case 5 to PC 1715, case 6 to PC 908, and case 18 to the shared PC 1715 target. Method 8597's corresponding display switch sends cases 5 and 18 to its shared mask read at PC 1327, while case 6 reaches the first-clear-bit display path containing the mask read at PC 542.
 4. Method 8612 PC 1371 separately associates the lobby enum `Lobby_BanGadgets` with `UI_GameSettings_Ban_Gadgets`. This supports the exclusion interpretation, but it is not treated as the trait's recovered declaration name.
 5. Match item-list builder method 4779 PCs 307-449 uses each bit to decide whether the corresponding gadget entry is copied into the active gadget vector. The direct gameplay chain below consumes that filtered vector.
 
@@ -105,12 +105,13 @@ For an always-equip scoring type, a nonzero mask may not disable every active ga
 
 ### UI-produced values
 
-Method 8617 provides two concrete non-default producers:
+Method 8617 provides three exact write paths:
 
-- PCs 1715-1756 toggle `1 << selectedIndex` with XOR for the ordinary multi-selection control.
-- PCs 851-976 implement random/single always-equip behavior. The single-item path writes `~(1 << selectedIndex)`, disabling every represented entry except the chosen one. The random path resets the mask to zero.
+- Case 4 `Game_AlwaysHaveItemSelect`, PCs 851-904, toggles flag `0x10` in `_-p2p`. It then writes `0` when that flag is clear, or converts the signed byte literal `0xfe` to `uint` and writes `0xfffffffe` when the flag is set. Under the proven mask polarity, the latter leaves only gadget-list index 0 enabled.
+- Case 6 `Game_GadgetsSelectionsAlwaysEquipSingle`, PCs 908-976, updates the selected index and writes `~(1 << selectedIndex)`, disabling every represented entry except the selected one.
+- Cases 5 `Game_GadgetsSelectionsAlwaysEquipRandom` and 18 `Game_GadgetsSelections` share PCs 1715-1756. When method argument 2 is zero, the path XORs `1 << controlSelectedIndex` into the mask. When that argument is nonzero, execution starts at PC 1756 and changes the control selection without writing the mask.
 
-The bitwise-complement path proves that high set bits are intentional UI output, not necessarily malformed data. Consumers still consult only indices present in `G`.
+There is no proven random-reset path. The complement and case-4 initialization paths prove that high set bits are intentional UI output, not necessarily malformed data. Consumers still consult only indices present in `G`.
 
 ### Reviewed shipped and corpus values
 
@@ -118,13 +119,13 @@ The reviewed `ItemSpawnRuleSetTypes` source contains 26 rule-set records and no 
 
 ## Default behavior and overrides
 
-**Default is `0`, meaning every gadget in the selected rule set remains eligible.** Three direct edges support this:
+**The initialized and mode-derived default is `0`, meaning every gadget in the selected rule set remains eligible.** Three direct edges support this:
 
-1. Game-mode-to-settings method 3766 explicitly writes zero to `_-Ii` at PC 132 when deriving normalized settings from a mode object.
-2. UI method 8617's random-selection branch explicitly resets the field to zero within PCs 851-976.
+1. The `uint` slot has no explicit constant initializer, and constructor method 3744 does not write it, so AVM2 field initialization supplies zero.
+2. Game-mode-to-settings method 3766 independently and unconditionally writes zero to `_-Ii` at PC 132 when normalizing a non-null mode object.
 3. Every replay in the exact 12-file reviewed cohort has word 14 equal to zero.
 
-Copy method 3790 retains a prior value. Settings readers 3758/3759 override the default with the stored word. UI method 8617 overrides it through the random/single and per-gadget branches above. No authentic nonzero replay is present to observe a persisted override, but the static UI producer, 32-bit writer, paired reader, and consumer form a complete non-default dataflow in the pinned executable.
+Case 4 in UI method 8617 can also write zero when it clears the always-have-item flag, but that conditional UI write is not evidence of a random default/reset. Copy method 3790 retains a prior value. Settings readers 3758/3759 replace the initialized value with the stored word. The three UI paths above can replace it with zero or nonzero masks. No authentic nonzero replay is present to observe a persisted override, but the static UI producers, 32-bit writer, paired reader, and consumer form a complete non-default dataflow in the pinned executable.
 
 ## Gameplay consuming control flow
 
@@ -149,7 +150,7 @@ The analyzer keys references by the trait's exact QName namespace/name pair, not
 | 3748, class 187 `_-33g` | 164, 168 | Replay bitstream settings writer, word 14 |
 | 3758, class 187 `_-pE` | 181, 192 | Alternate fixed-settings reader, word 14 |
 | 3759, class 187 `_-N4v` | 168, 178 | Replay bitstream settings reader, word 14 |
-| 3766, class 187 `_-t6` | 126, 132 | Mode-derived default override to zero |
+| 3766, class 187 `_-t6` | 126, 132 | Mode-derived normalization writes zero |
 | 3783, class 187 `_-U53` | 36, 40, 128, 132 | Always-equip mask validation |
 | 3790, class 187 `_-Z5S` | 162, 167, 171 | Settings copy |
 | 4771, class 253 `_-H6w` | 53 | Pass to active item-list builder |
@@ -158,7 +159,7 @@ The analyzer keys references by the trait's exact QName namespace/name pair, not
 | 5573, class 296 static `_-i1F` | 78 | Gadget power filtering branch |
 | 6884, class 380 `_-V4Z` | 120 | Pass to active item-list builder |
 | 8597, class 472 `_-66t` | 542, 1327 | Always-equip and ordinary UI display state |
-| 8617, class 472 `_-CC` | 889, 909, 960, 967, 1737, 1744 | UI reset, single-item complement, and bit toggle writes |
+| 8617, class 472 `_-CC` | 889, 909, 960, 967, 1737, 1744 | Case-4 zero/`0xfffffffe` write, case-6 single-item complement, and shared case-5/18 bit toggle |
 
 There are no other exact QName references in the 15,010 decoded bodies. In particular, method 3746 has none. This complete disposition is limited to the pinned ABC identity; it is not a claim about other builds.
 
@@ -182,7 +183,7 @@ bun run provenance:game-settings-word-14 -- ... | jq '.exactTraitReferences, .re
 
 Successful output reports `proven-for-reviewed-inputs`, 15,010 decoded bodies, valid branch targets, 30 exact-trait instructions in the 14 methods above, 12 fixtures, the sole observed value `[0]`, and rule-set ID 2 with seven gadgets. It emits no replay bytes, names, player IDs, fixture filenames, local paths, or source XML payload. Operating-system errors can still reveal a user-supplied path.
 
-The command fails closed on a changed ABC, manifest, fixture, item-spawn source, build string, branch target, typed trait definition, reference method/count, source label, or corpus count.
+The root command first builds the pinned `abc-disassembler` dependency, so it is self-sufficient after a clean frozen-lockfile install. The command fails closed on a changed ABC, manifest, fixture, item-spawn source, build string, branch target, typed trait definition or initializer, complete reference PC/opcode ledger, relevant enum index or switch target, UI write shape, source label, or corpus count.
 
 ## Confidence and residual gaps
 
@@ -193,7 +194,7 @@ The command fails closed on a changed ABC, manifest, fixture, item-spawn source,
 - Polarity: a set bit excludes the gadget at the same zero-based `GadgetList` index.
 - Default: zero, with all listed gadgets eligible.
 - Reference validation: exact conditional policy in method 3783.
-- Non-default producers: per-gadget XOR and always-equip single-item complement in method 8617.
+- Non-default producers: case-4 `0xfffffffe` initialization, case-6 single-item complement, and shared case-5/18 per-gadget XOR in method 8617.
 - Gameplay effect: filtered active gadget vector reaches item selection and creation.
 - Completeness: all exact QName references in the pinned ABC are disposed above.
 
@@ -203,6 +204,7 @@ The command fails closed on a changed ABC, manifest, fixture, item-spawn source,
 2. **Authentic nonzero fixture:** absent. The reviewed cohort proves only value zero. A hash-attested nonzero build-10.09 replay would add production-frequency evidence but is not needed to establish the static meaning.
 3. **Server and cross-field policy:** unknown. Method 3783 proves the inspected client validator, not every server-side or UI reachability rule.
 4. **Other builds:** out of scope. Bit ordering, lists, and validators are proven only for ABC `9fe9...ba2d` and the pinned shipped source.
+5. **Higher-level UI intent:** readable enum labels and exact switch/dataflow are proven. Obfuscated argument and control-field names limit stronger claims about why cases 5 and 18 share a target. In particular, no random-reset behavior is claimed.
 
 ## Related reviewed evidence
 
