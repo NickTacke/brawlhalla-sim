@@ -403,11 +403,9 @@ Do not duplicate these unresolved domain decisions:
 - mode dependencies and round-specific implementations: [Map replay-producing modes to patch closure dependencies](https://github.com/NickTacke/brawlhalla-sim/issues/36);
 - broader authentic coverage: [Decide the conformance corpus coverage model](https://github.com/NickTacke/brawlhalla-sim/issues/16).
 
-### New ticket-ready residual decision
+### Newly charted residual decision
 
-Only one newly isolated decision lacks a clear existing owner:
-
-**Recover simultaneous command-selection priority in method 6125.** When multiple rising edges for heavy, light/quick-pickup, throw, dodge, and context-sensitive pickup occur in one sampled interval, which gates win, which actions suppress later candidates, and which state writes remain? Start at method 6125 edge construction pc1001..1042 and the attack/action calls at pc2613..2617 and pc3369..3373. Acceptance: a branch-complete precedence table with exact command masks, eligibility predicates, side effects, and chosen action for every simultaneous pair and reachable multi-bit combination. This refines action semantics but does not reopen the scheduler/phase resolution.
+[Recover simultaneous command-selection priority](https://github.com/NickTacke/brawlhalla-sim/issues/40) owns the one newly isolated gap. When multiple rising edges for heavy, light/quick-pickup, throw, dodge, and context-sensitive pickup occur in one sampled interval, it will recover which gates win, which actions suppress later candidates, and which state writes remain. It starts at method 6125 edge construction pc1001..1042 and the attack/action calls at pc2613..2617 and pc3369..3373. Its acceptance requires a branch-complete precedence table with exact command masks, eligibility predicates, side effects, and the chosen action for every simultaneous pair and reachable multi-bit combination. This refines action semantics but does not reopen the scheduler/phase resolution.
 
 ## Implementation handoff
 
