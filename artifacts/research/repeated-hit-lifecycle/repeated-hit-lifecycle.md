@@ -238,4 +238,42 @@ Leave unclaimed:
 
 ## One-line map gist
 
-Pinned AVM2 proves per-power non-aliased hit histories, strict positive timing with equality admission, unconditional present-zero blocking, conditional deep-copy inheritance, exact write/reset timing, and lifecycle-before-arbitration-before-admission; complete reachability and authenticated traces remain open.
+Pinned AVM2 proves per-power non-aliased hit histories, strict positive timing with equality admission, unconditional present-zero blocking, conditional deep-copy inheritance, exact write/reset timing, and lifecycle-before-arbitration-before-admission; complete reachability, target/owner admission, and authenticated traces remain open.
+
+## Follow-up disposition
+
+This follow-up rechecked the unresolved acceptance clauses against the hash-pinned local evidence available after the prior resolution. No claim is promoted to attested, and issue 71 remains open.
+
+### Findings and severity
+
+| Severity | Local evidence | Finding |
+| --- | --- | --- |
+| **BLOCKER** | `tools/avm2-provenance/repeated_hit_lifecycle_provenance.ts` | The analyzer is fail-closed for the pinned ABC, source ledger, exact-QName ledgers, method bodies, branch destinations, and lifecycle anchors. It is a static verifier only: it has no replay-producing executable-root graph and no authenticated runtime-trace input. |
+| **BLOCKER** | `artifacts/research/reachable-power-phases/reachable-power-phases.md` at local commit `b34187af16efc5b2570a19fece0285e159d83d38` | The adjacent source-selection closure reaches 3,632 of 3,670 non-template PowerTypes, but 38 records, dynamic lookup values, 47 lookup-owning methods, and replay-producing match-root reachability remain unresolved. Source presence is not replay reachability. |
+| **BLOCKER** | `artifacts/research/interpreted-reference-oracle/interpreted-reference-oracle.md` at local commit `29770640d30558a6bb6a25229253f2bc46d9ac92` | The selected Ruffle architecture is a planning decision, not an attested runtime. No complete-AIR patched runtime, trusted target trace, T3 corpus execution, or cross-architecture equality result exists. |
+| **BLOCKER** | `artifacts/research/replay-lifecycle-inputs/replay-lifecycle-inputs.md` at local commit `39cc31b154fbb4540f30d24cad7e248f015379f8` | No consented, authenticated family-by-exit input matrix is available. Missing files cannot establish negative or not-applicable lifecycle cells. |
+| **HIGH** | `artifacts/research/offensive-admission-pipeline/offensive-admission-pipeline.md` at local commit `3745444` | The related static analyzer bounds the interaction: repeat gating precedes candidate state checks, reachable active-power invulnerability expiry can precede arbitration, pairwise losers are marked before method 1484 admission, and the `CanDamageEveryone`/team/mode-mask/owner/sign relation subgate is ordered. Complete target modes, owner/state branches, and runtime traces remain unresolved. |
+
+### Target and owner admission seam
+
+The adjacent hash-pinned admission evidence is useful only as a bounded static seam. It does not alter the lifecycle result:
+
+1. Method 1540 applies repeat presence and interval checks before the reached GrabRelease, state-zero, and invulnerability paths.
+2. On a reached active-power path, method 3217 calls fighter update, which can expire invulnerability before method 1474 pairwise arbitration.
+3. Method 1474 marks losers before method 1484 survivor admission.
+4. Method 1484's reached relation subgate is `CanDamageEveryone || sourceTeam != targetTeam || (modeMaskAllows && owner != target)`, followed by a sign gate and then later target-mode and actor-state processing. `CanDamageEveryone` is not a global bypass.
+5. The complete 14-mode target set, all parser-flag combinations, every owner/team/assist/grab/dead/respawn/invulnerability branch, and authenticated execution of this order remain unknown.
+
+These are static control/dataflow findings from the same pinned build, not interpreted-runtime observations. The repeated-hit analyzer's third blocker makes this boundary explicit and fails closed rather than treating the bounded seam as complete admission semantics.
+
+### Residual risks
+
+- A source row or static callsite may not occur in any supported replay-producing match; source frequency and declarative selection do not prove execution.
+- Static absent-versus-zero, present-zero, equality, inheritance, write-before-`OnHit`, teardown, rollback, and phase-order findings have no authenticated runtime witness.
+- Collection copy and rollback semantics may interact with owner, team, mode, or lifecycle state outside the pinned methods; no unobserved behavior is inferred.
+- Static call order does not establish scheduler completion, exception, native, callback, or same-tick state order in the absent runtime oracle.
+- The related target/owner report uses a bounded relation seam; it does not close downstream target modes or state meanings.
+
+### Acceptance decision
+
+**Acceptance level: attested - not met.** Leave issue 71 **OPEN**. Do not close it until replay-producing executable roots and complete supported-match reachability are proven, the complete-AIR interpreted runtime and authenticated lifecycle trace matrix exist, and target/owner admission interaction is closed. Issue #1 was read only and not edited.

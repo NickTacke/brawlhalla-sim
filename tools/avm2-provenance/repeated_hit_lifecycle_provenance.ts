@@ -693,6 +693,7 @@ console.log(
       blockers: [
         'No closed replay-producing root proves complete reachability for every PowerType lifecycle combination.',
         'No authenticated interpreted-runtime trace covers zero, equality, both inheritance paths, teardown, rollback, and same-tick arbitration/admission order.',
+        'Complete target/owner admission semantics remain open beyond the bounded relation and arbitration seam.',
       ],
     },
     null,
