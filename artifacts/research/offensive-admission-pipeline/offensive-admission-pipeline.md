@@ -12,6 +12,21 @@ It does not close every replay-reachable target-policy path. [Prove the reachabl
 
 No simulator offensive-admission policy should be represented as reference-exact from this bounded result.
 
+## Worktree verification and review findings
+
+The existing fail-closed analyzer was rerun in this worktree against local primary inputs whose SHA-256 values match the identities below. It emitted `bounded-static-admission-state-order-with-reachability-and-trace-blockers`, decoded 15,010 method bodies, validated all branch targets, checked 3,671 `PowerTypes` records across 182 columns, and verified all 12 method-body and 11 exact-QName field ledgers. This is static verification only; no interpreted-runtime trace was available or inferred.
+
+| Severity | Finding | Evidence path | Disposition |
+| --- | --- | --- | --- |
+| **Blocker** | Replay-producing PowerType roots, executable lookup reachability, dynamic names, and 38 source-graph exclusions remain open. | `artifacts/research/offensive-admission-pipeline/offensive-admission-pipeline.md:209` | Universal reachability acceptance is not met. |
+| **Blocker** | All 14 downstream target modes, parser-flag combinations, final target sets, and state effects remain open. | `artifacts/research/offensive-admission-pipeline/offensive-admission-pipeline.md:210` | Universal target-policy acceptance is not met. |
+| **High** | Fighter state and ordinary invulnerability branches are not partitioned beyond the exact state-zero/timestamp boundaries. | `tools/avm2-provenance/offensive_admission_pipeline_provenance.ts:744-745` | Fail closed; no lifecycle semantics are promoted. |
+| **High** | `IsThrow` consumers outside the pinned admission methods can affect selection and state, but their reachable order is unknown. | `tools/avm2-provenance/offensive_admission_pipeline_provenance.ts:746` | No throw-path interaction claim is made. |
+| **Blocker** | Full owner/team/mask, assist, grab, dead, respawn, and later method-1484/1486 ordering is not semantically closed. | `artifacts/research/offensive-admission-pipeline/offensive-admission-pipeline.md:211-214` | No universal admission policy is implemented. |
+| **Blocker** | Authenticated interpreted-runtime traces for the complete matrix are unavailable. | `artifacts/research/offensive-admission-pipeline/offensive-admission-pipeline.md:215` | Static evidence is not runtime proof. |
+
+The verification command used hash-pinned inputs supplied outside the repository and emitted no source rows, replay bytes, player data, or local input paths. The issue remains open because every blocker above is part of its universal acceptance clause.
+
 ## Evidence grades
 
 - **Proven:** unique hash-pinned AVM2 control/dataflow, complete exact-QName reference ledger, full method-body hash, or exact branch destination.
