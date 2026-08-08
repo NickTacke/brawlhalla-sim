@@ -331,3 +331,35 @@ No GitHub tracker mutation was performed.
 This note and analyzer contain only hashes, counts, obfuscated identifiers, public QNames, method signatures, byte PCs, constants, and bounded control/dataflow descriptions. They contain no ABC/SWF/SWZ bytes, decrypted assets, replay bytes, player or account data, credentials, environment values, or local filesystem paths.
 
 The proprietary `main.abc` remains outside the repository and is supplied by the researcher. The repository distributes only independently written analysis code and small derived evidence under the repository's MIT license. Brawlhalla names and executable content remain the property of their respective owners. This work is unofficial and is not affiliated with or endorsed by Ubisoft or Blue Mammoth Games.
+
+## Continuation audit of explicit acceptance blockers
+
+This continuation rechecks committed, hash-pinned evidence only. It adds no executable, archive, extracted-source, replay, player, account, or trace payload. The existing owner-response analyzer is already fail-closed on the pinned ABC identity, complete decoded-body count, branch targets, method identities, exact flag ledgers, and bounded response anchors; no analyzer semantic change is justified by this audit.
+
+### Review findings
+
+| Severity | Finding | Evidence-backed disposition | Acceptance effect |
+| --- | --- | --- | --- |
+| **Blocker** | Hard, soft, and trigger post-query mutation | The collision-query report proves exact masks, filters, and outputs, but does not close a per-owner mutation path. The owner-response report proves only bounded sticky, no-slide, bounce, mode, pressure, and lava fragments. | Every hard, soft, and trigger owner-family clause remains **not met**. |
+| **Blocker** | Sticky, no-slide, bounce, game-mode/mud, pressure-plate, lava, and ice lifecycles | Moving-carry evidence closes method-7240's bounded masks, state gates, and lava retention. It does not close entry/reset, duration, callback implementation, damage, immunity, team, or repeated-contact lifecycles across all owners. Ice has no exact-QName consumer beyond initialization in the pinned ABC. | Universal lifecycle closure remains **not met**. |
+| **Blocker** | Item, projectile, and bot ownership | The complete direct ledger contains obfuscated owners and readable mode/companion owners, but names, inheritance proximity, or callsite proximity do not prove item, projectile, or bot ownership. | No unclassified owner is promoted into an owner family. |
+| **Blocker** | Direct and indirect query reachability | The pinned query evidence enumerates 93 direct calls in 38 methods, while the reachability work leaves those sites and indirect dispatch unresolved from replay-producing roots. | Query syntax is bounded; executable owner reachability remains **not met**. |
+| **Blocker** | Replay-producing configuration matrix | The pinned source-selection evidence leaves replay-producing roots and dynamic lookup values unresolved. The trace audit covers only a narrow completed online cohort and has no authenticated lifecycle/configuration matrix. | No matrix row can be promoted to universal owner-family coverage. |
+| **Blocker** | Trusted trace status | The trace audit records no T3 interpreted-reference oracle, authenticated hook manifest, or trusted collision trace. Static agreement is not runtime agreement. | Trusted runtime agreement remains **not met**. |
+| **Bounded finding** | Ordinary phase seams | Static phase evidence places moving-world refresh/carry before fighter entry and response on the cited path, with candidate/arbitration order bounded separately. | This does not establish one universal owner-local collision phase. |
+
+### Acceptance disposition after continuation
+
+The explicit blockers still resolve as follows: hard/soft/trigger every-owner responses **not met**; sticky/no-slide/bounce/game-mode/mud/pressure/lava/ice lifecycle closure **not met**; item/projectile/bot ownership **not met**; direct/indirect query reachability **not met**; replay-producing configuration matrix **not met**; trusted trace status **not met**. Overall acceptance remains **unmet** and issue 67 must remain open.
+
+### Evidence trail
+
+- [Owner-response closure and fail-closed analyzer](https://github.com/NickTacke/brawlhalla-sim/blob/a8231ad480bb61b4b73703bc0f61d88a5deda35a/artifacts/research/collision-owner-responses/collision-owner-responses.md) - exact pinned ABC `9fe9c830...bcfba2d`, build `10.09.96325`, 15,010 method bodies, bounded fragments, and negative acceptance contract.
+- [Collision query options and composite consumers](https://github.com/NickTacke/brawlhalla-sim/blob/a0218e43ab306d9a59017c281a241b65a97d84b5/artifacts/research/collision-query-flags/collision-query-flags.md) - 93 direct `_-K2O` calls across 38 methods, masks/options, and unresolved caller classification.
+- [Collision query reachability blockers](https://github.com/NickTacke/brawlhalla-sim/blob/46d5402834896ecb8a29fcb8c3010f8f3019a314/artifacts/research/collision-query-reachability/collision-query-reachability.md) - unresolved replay-root and indirect-dispatch boundary.
+- [Collision phase and arbitration order](https://github.com/NickTacke/brawlhalla-sim/blob/8930a2fe792855a8b8f4fa89b634295f92e9665c/artifacts/research/collision-arbitration-order/collision-arbitration-order.md) - bounded candidate, tie, dynamic-container, refresh, and ordinary phase order.
+- [Moving-platform carry states](https://github.com/NickTacke/brawlhalla-sim/blob/cea8a5c18c9d94dbaf9df17a276ba21a8a819f31/artifacts/research/moving-platform-carry-states/moving-platform-carry-states.md) - method-7240 branch-complete static contract and lava-bit use, without universal owner response closure.
+- [Reachable PowerType phase universe](https://github.com/NickTacke/brawlhalla-sim/blob/b34187af16efc5b2570a19fe0285e159d83d38/artifacts/research/reachable-power-phases/reachable-power-phases.md) - source graph and unresolved replay-root/dynamic lookup reachability.
+- [Replay trace capability blocker](https://github.com/NickTacke/brawlhalla-sim/blob/effd0bd15b282d6fff6c740ccef8b4b3bcc52f66/artifacts/research/replay-setup-cleanup-traces/replay-setup-cleanup-traces.md) - no authenticated T3 oracle, hook manifest, or configuration/lifecycle trace matrix.
+
+No new ticket was created, issue #1 was not edited, and no universal simulator behavior is promoted from these bounded findings.
